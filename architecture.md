@@ -195,12 +195,13 @@ Small Express/Fastify service. Token-based auth from day one (not cookie/session
 | `GET` | `/accounts/:id/runs` | Run history for one account (debugging/status) |
 | `POST` | `/accounts/:id/refresh` | Enqueues an on-demand scrape job for one account |
 | `DELETE` | `/accounts/:id` | Soft-deletes a library account (sets `deleted_at`; `204`). It disappears from the household's accounts and checkouts and is no longer scraped |
-| `GET` | `/accounts/:id/status` | Poll endpoint — latest run status, for frontend "refreshing…" UI |
+| `GET` | `/accounts/:id/status` | Latest run status for one account (the account's `last_status` plus its newest run) |
+| `GET` | `/households/:id/runs?ids=a,b,c` | Poll endpoint for the frontend "refreshing…" UI — status of specific runs (the `run_id`s from `/refresh`), one request for any number of cards. Only runs of the household's own accounts are returned; ids from elsewhere come back missing. Up to 100 ids; no `raw_output` |
 | `GET` | `/households/:id/accounts` | The library accounts (cards) in a household, with their library and last run status — never credentials |
 | `POST` | `/households/:id/accounts` | Add a new library account to a household. Body: `displayName`, `libraryId`, `credentials` (`username`, `pin`). The scraper type and its config (`baseUrl`) are filled in from the `libraries` row, not sent by the client; credentials are encrypted before storage |
 
 Notes:
-- `/refresh` returns immediately with a `run_id`; the frontend polls `/accounts/:id/status` or `/accounts/:id/runs` rather than blocking on the scrape.
+- `/refresh` returns immediately with a `run_id`; the frontend polls `/households/:id/runs?ids=…` with the `run_id`s it was given rather than blocking on the scrape.
 - Credentials are only ever written encrypted, decrypted only inside the worker process, never returned by any API response.
 
 ---

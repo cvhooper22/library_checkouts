@@ -43,7 +43,8 @@ const sleep = (ms, signal) =>
  *
  * @param {{ token: string, householdId: string, accountId: string | null, signal: AbortSignal }} opts
  * @returns {Promise<RefreshOutcome>}
- * @throws {ApiError}  a 401 (expired token) or a failure to enqueue; polling hiccups are retried
+ * @throws {ApiError}  a 4xx (expired token, not a member…) or a failure to enqueue; network
+ *   errors and 5xx while polling are retried until we give up
  */
 export async function refreshAccounts({ token, householdId, accountId, signal }) {
 	// The checkouts list only knows about cards with something out, so ask for the cards themselves.
@@ -56,15 +57,13 @@ export async function refreshAccounts({ token, householdId, accountId, signal })
 
 	if (ids.length === 0) return 'idle'; // no cards, nothing to pull
 
-	const runs = await Promise.all(
-		ids.map(async (id) => ({
-			accountId: id,
-			runId: (await api(`/accounts/${id}/refresh`, { method: 'POST', token })).runId
-		}))
+	/** @type {string[]} */
+	const runIds = await Promise.all(
+		ids.map(async (id) => (await api(`/accounts/${id}/refresh`, { method: 'POST', token })).runId)
 	);
 
 	const deadline = Date.now() + GIVE_UP_MS;
-	let pending = runs;
+	let pending = runIds;
 	let failed = 0;
 
 	while (pending.length && !signal.aborted) {
@@ -72,24 +71,23 @@ export async function refreshAccounts({ token, householdId, accountId, signal })
 		await sleep(POLL_MS, signal);
 		if (signal.aborted) break;
 
-		const results = await Promise.all(
-			pending.map(async (run) => {
-				try {
-					const { latestRun } = await api(`/accounts/${run.accountId}/status`, { token });
-					// A newer run means ours was already picked up and finished ahead of it.
-					if (latestRun?.id !== run.runId) return { run, done: true, ok: true };
-					return { run, done: latestRun.status !== 'running', ok: latestRun.status === 'success' };
-				} catch (e) {
-					if (e instanceof ApiError && e.status === 401) throw e;
-					return { run, done: false, ok: true }; // network blip: try again next tick
-				}
-			})
-		);
+		/** @type {{ id: string, status: string }[]} */
+		let runs;
+		try {
+			({ runs } = await api(`/households/${householdId}/runs?ids=${pending.join(',')}`, { token }));
+		} catch (e) {
+			// A 4xx won't fix itself on the next tick; a network error or 5xx might.
+			if (e instanceof ApiError && e.status >= 400 && e.status < 500) throw e;
+			continue;
+		}
 
-		failed += results.filter((r) => r.done && !r.ok).length;
-		pending = results.filter((r) => !r.done).map((r) => r.run);
+		const status = new Map(runs.map((r) => [r.id, r.status]));
+		// A run the API doesn't return can't finish, so it counts as failed rather than polling forever.
+		const settled = pending.filter((id) => status.get(id) !== 'running');
+		failed += settled.filter((id) => status.get(id) !== 'success').length;
+		pending = pending.filter((id) => status.get(id) === 'running');
 	}
 
 	if (failed === 0) return 'ready';
-	return failed === runs.length ? 'failed' : 'partial';
+	return failed === runIds.length ? 'failed' : 'partial';
 }

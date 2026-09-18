@@ -74,4 +74,26 @@ router.post('/:id/accounts', requireHouseholdMember, async (req, res) => {
   res.status(201).json({ account: safeAccount });
 });
 
+// Progress of specific runs, for the frontend's "refreshing…" poll: one request for however many
+// cards were re-stamped, instead of one per card. Only runs of this household's accounts are ever
+// returned (an id from another household just comes back missing), and only the status fields —
+// not `rawOutput`, which is the whole scrape.
+const MAX_RUN_IDS = 100;
+
+router.get('/:id/runs', requireHouseholdMember, async (req, res) => {
+  const ids = String(req.query.ids || '').split(',').filter(Boolean);
+  if (ids.length === 0 || ids.length > MAX_RUN_IDS) {
+    throw new HttpError(400, `ids must list 1 to ${MAX_RUN_IDS} run ids, comma-separated`);
+  }
+  if (!ids.every((id) => UUID.test(id))) {
+    throw new HttpError(400, 'ids must be run ids from POST /accounts/:id/refresh');
+  }
+
+  const runs = await prisma.run.findMany({
+    where: { id: { in: ids }, account: { householdId: req.params.id } },
+    select: { id: true, accountId: true, status: true, error: true, finishedAt: true },
+  });
+  res.json({ runs });
+});
+
 module.exports = router;

@@ -27,7 +27,8 @@ Roughly in order of usefulness.
 
 - [ ] **`test-flaky`** — fails about half the time (`config.failRate`, default 0.5).
       Gives repeatable *partial* results on the "All" tab without depending on two
-      fixed-failure cards, and exercises retry-by-clicking-again.
+      fixed-failure cards, and exercises retry-by-clicking-again. Also the way to
+      test BullMQ retries against the polling flow (see `refresh-polling.md`).
 - [ ] **Sequenced scraper** (`test-sequence`) — returns a scripted list per pull
       number (e.g. pull 1: A, B, C; pull 2: B, D; pull 3: none), with the pull
       counter kept in `scraperConfig` or derived from the account's run count.
