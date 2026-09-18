@@ -116,6 +116,7 @@ A single library card belonging to a household.
 | `schedule_cron` | text | default `"0 6 * * *"`, overridable per account |
 | `last_run_at` | timestamptz | |
 | `last_status` | text | `"success"` \| `"failed"` \| `"running"` |
+| `deleted_at` | timestamptz, nullable | soft delete — set when the user removes the card; the API, daily enqueue and worker all ignore rows where it's set |
 
 ### `runs`
 One row per scrape attempt — the audit/debug trail.
@@ -193,8 +194,10 @@ Small Express/Fastify service. Token-based auth from day one (not cookie/session
 | `GET` | `/households/:id/checkouts` | Current (non-returned) checkouts across all accounts in a household |
 | `GET` | `/accounts/:id/runs` | Run history for one account (debugging/status) |
 | `POST` | `/accounts/:id/refresh` | Enqueues an on-demand scrape job for one account |
+| `DELETE` | `/accounts/:id` | Soft-deletes a library account (sets `deleted_at`; `204`). It disappears from the household's accounts and checkouts and is no longer scraped |
 | `GET` | `/accounts/:id/status` | Poll endpoint — latest run status, for frontend "refreshing…" UI |
-| `POST` | `/households/:id/accounts` | Add a new library account to a household (credentials encrypted before storage) |
+| `GET` | `/households/:id/accounts` | The library accounts (cards) in a household, with their library and last run status — never credentials |
+| `POST` | `/households/:id/accounts` | Add a new library account to a household. Body: `displayName`, `libraryId`, `credentials` (`username`, `pin`). The scraper type and its config (`baseUrl`) are filled in from the `libraries` row, not sent by the client; credentials are encrypted before storage |
 
 Notes:
 - `/refresh` returns immediately with a `run_id`; the frontend polls `/accounts/:id/status` or `/accounts/:id/runs` rather than blocking on the scrape.

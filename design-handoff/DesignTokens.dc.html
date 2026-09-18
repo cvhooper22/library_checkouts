@@ -211,11 +211,13 @@ class Component extends DCLogic {
         },
         {
           title: "ACCENTS",
-          note: "THREE, AND NO MORE",
+          note: "THREE HUES, AND NO MORE \u2014 DANGER REUSES THE ALERT RED",
           swatches: [
             SW("--dd-stamp", "#2F2A63", "Every action \u2014 borders, labels, focus"),
             SW("--dd-stamp-overdue", "#8E241A", "Overdue stamp, error text"),
             SW("--dd-alert", "#B3261E", "Overdue relative-due text"),
+            SW("--dd-danger", "#B3261E", "Destructive actions \u2014 border, label, focus (= --dd-alert)"),
+            SW("--dd-danger-wash", "rgba(179,38,30,.1)", "Destructive action hover fill", "#EFE3C6"),
             SW("--dd-kpi-week", "#A2701A", "This-week count > 0"),
             SW("--dd-kpi-later", "#A9B4BF", "Later count \u2014 deliberately quiet"),
             SW("--dd-kpi-zero", "#B9A99A", "Any count of 00")
@@ -276,7 +278,7 @@ class Component extends DCLogic {
         { head: "LABELS ARE PRINTED, NOT STYLED", body: "All-caps, 700, label blue, wide tracking, and sitting under the field they name \u2014 never above it." },
         { head: "FIELDS ARE RULED, NOT BOXED", body: "Transparent input, no border but the bottom rule; focus swaps that rule to stamp violet. Never a filled input." },
         { head: "ACTIONS ARE STAMP VIOLET", body: "Outline, 2px radius, display font, wide tracking. The primary one may sit at 0.82 opacity with a -1.2\u00b0 tilt, going full on hover." },
-        { head: "OVERDUE IS THE ONLY RED", body: "Applied at row level: stamp ink and relative-due text. Nothing else in the product ever turns red." },
+        { head: "RED MEANS OVERDUE OR DESTRUCTIVE", body: "Overdue is applied at row level: stamp ink and relative-due text. A destructive action (Remove card) is the same outline stamp button in --dd-danger at full opacity, with --dd-danger-wash on hover. Nothing else in the product ever turns red." },
         { head: "STAMP VARIANCE IS DETERMINISTIC", body: "Rotation and wear hash from the title via stampVars(). Drop it and every stamp prints identically \u2014 nothing breaks." }
       ]
     };

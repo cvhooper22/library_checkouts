@@ -61,6 +61,11 @@ async function processJob(job) {
   const { accountId, runId } = job.data;
 
   const account = await prisma.account.findUniqueOrThrow({ where: { id: accountId } });
+  // The card was removed after this job was queued; don't log in to a library for it.
+  if (account.deletedAt) {
+    console.log(`[worker] skipping job ${job.id}: account ${accountId} was deleted`);
+    return;
+  }
   const scraper = getScraper(account.scraperType);
 
   // The on-demand /accounts/:id/refresh endpoint (api/src/routes/accounts.js)

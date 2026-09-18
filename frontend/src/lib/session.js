@@ -39,12 +39,21 @@ export function clearSession() {
 
 /**
  * Library-card style holder line, e.g. "Demo Household" -> "D. HOUSEHOLD · 4471".
- * The 4-digit number is decorative: a stable hash of the household id.
+ * The 4-digit number is decorative: a stable hash of the id.
+ * @param {string} name
+ * @param {string} id
+ */
+export function holderLine(name, id) {
+	const [first = '', ...rest] = name.trim().split(/\s+/);
+	const short = rest.length ? `${first[0]}. ${rest.join(' ')}` : first;
+	const hash = [...id].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7);
+	return `${short.toUpperCase()} · ${1000 + (hash % 9000)}`;
+}
+
+/**
+ * The household's holder line, shown when no single account is selected.
  * @param {Pick<Session, 'householdName' | 'householdId'>} s
  */
 export function cardHolder({ householdName, householdId }) {
-	const [first = '', ...rest] = householdName.trim().split(/\s+/);
-	const name = rest.length ? `${first[0]}. ${rest.join(' ')}` : first;
-	const hash = [...householdId].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7);
-	return `${name.toUpperCase()} · ${1000 + (hash % 9000)}`;
+	return holderLine(householdName, householdId);
 }

@@ -63,7 +63,8 @@
 			// Registering signs the user in: the response carries a token and their new household.
 			const { token, household } = await api('/auth/register', { method: 'POST', body });
 			setSession({ token, householdId: household.id, householdName: household.name, demo: false });
-			await goto('/');
+			// A new household has no library cards yet; finishing setup means filing one.
+			await goto('/cards');
 		} catch (e) {
 			// The rate limiter answers with plain text, not the API's usual { error } JSON.
 			error =
