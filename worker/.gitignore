@@ -1,0 +1,9 @@
+node_modules/
+.env
+
+# scraper debug artifacts (may contain account data)
+scraper-debug-*.png
+scraper-debug-*.html
+
+# persistent per-account browser profiles (cookies/session state)
+.puppeteer-profiles/

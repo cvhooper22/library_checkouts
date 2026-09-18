@@ -1,0 +1,112 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(uuid()) @db.Uuid
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  ownedHouseholds  Household[]        @relation("HouseholdOwner")
+  householdMembers HouseholdMember[]
+
+  @@map("users")
+}
+
+model Household {
+  id          String   @id @default(uuid()) @db.Uuid
+  name        String
+  ownerUserId String   @map("owner_user_id") @db.Uuid
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  owner   User              @relation("HouseholdOwner", fields: [ownerUserId], references: [id])
+  members HouseholdMember[]
+  accounts Account[]
+
+  @@map("households")
+}
+
+model HouseholdMember {
+  householdId String @map("household_id") @db.Uuid
+  userId      String @map("user_id") @db.Uuid
+  role        String
+
+  household Household @relation(fields: [householdId], references: [id])
+  user      User      @relation(fields: [userId], references: [id])
+
+  @@id([householdId, userId])
+  @@map("household_members")
+}
+
+model Library {
+  id                  String @id @default(uuid()) @db.Uuid
+  name                String
+  baseUrl             String @map("base_url")
+  scraperTypeDefault  String @map("scraper_type_default")
+
+  accounts Account[]
+
+  @@map("libraries")
+}
+
+model Account {
+  id                   String    @id @default(uuid()) @db.Uuid
+  householdId          String    @map("household_id") @db.Uuid
+  displayName          String    @map("display_name")
+  libraryId            String    @map("library_id") @db.Uuid
+  scraperType          String    @map("scraper_type")
+  scraperConfig        Json      @default("{}") @map("scraper_config")
+  credentialsEncrypted String    @map("credentials_encrypted")
+  scheduleCron         String    @default("0 6 * * *") @map("schedule_cron")
+  lastRunAt            DateTime? @map("last_run_at") @db.Timestamptz
+  lastStatus           String?   @map("last_status")
+
+  household Household  @relation(fields: [householdId], references: [id])
+  library   Library    @relation(fields: [libraryId], references: [id])
+  runs      Run[]
+  checkouts Checkout[]
+
+  @@map("accounts")
+}
+
+model Run {
+  id              String    @id @default(uuid()) @db.Uuid
+  accountId       String    @map("account_id") @db.Uuid
+  startedAt       DateTime  @default(now()) @map("started_at") @db.Timestamptz
+  finishedAt      DateTime? @map("finished_at") @db.Timestamptz
+  status          String
+  error           String?
+  scraperVersion  String    @map("scraper_version")
+  rawOutput       Json?     @map("raw_output")
+
+  account   Account    @relation(fields: [accountId], references: [id])
+  checkouts Checkout[]
+
+  @@map("runs")
+}
+
+model Checkout {
+  id           String    @id @default(uuid()) @db.Uuid
+  accountId    String    @map("account_id") @db.Uuid
+  runId        String    @map("run_id") @db.Uuid
+  externalId   String    @map("external_id")
+  title        String
+  dueDate      DateTime  @map("due_date") @db.Date
+  overdue      Boolean   @default(false)
+  imgSrc       String?   @map("img_src")
+  firstSeenAt  DateTime  @default(now()) @map("first_seen_at") @db.Timestamptz
+  lastSeenAt   DateTime  @default(now()) @map("last_seen_at") @db.Timestamptz
+  returnedAt   DateTime? @map("returned_at") @db.Timestamptz
+
+  account Account @relation(fields: [accountId], references: [id])
+  run     Run     @relation(fields: [runId], references: [id])
+
+  @@unique([accountId, externalId])
+  @@map("checkouts")
+}
