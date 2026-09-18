@@ -1,0 +1,20 @@
+{
+  "name": "@library-tracker/api",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Express API: auth, household/account reads, on-demand refresh trigger.",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch --env-file=.env src/index.js"
+  },
+  "dependencies": {
+    "@library-tracker/db": "file:../db",
+    "bcryptjs": "^3.0.3",
+    "bullmq": "^6.3.6",
+    "cors": "^2.8.6",
+    "express": "^5.2.1",
+    "ioredis": "^6.0.0",
+    "jsonwebtoken": "^9.0.3"
+  }
+}

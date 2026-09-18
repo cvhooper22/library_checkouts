@@ -5,7 +5,9 @@
   "description": "BullMQ worker: scraper registry, Puppeteer scrapes, checkout upserts.",
   "scripts": {
     "start": "node src/index.js",
+    "dev": "node --env-file=.env src/index.js",
     "enqueue-daily": "node src/enqueueDaily.js",
+    "enqueue-daily:dev": "node --env-file=.env src/enqueueDaily.js",
     "scrape-local": "node scripts/scrape-local.js"
   },
   "dependencies": {

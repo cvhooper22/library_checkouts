@@ -1,0 +1,35 @@
+name: library-checkouts-dev
+
+# Local dev infra only — not used in deployment (see render-deployment-guide.html,
+# which provisions managed Postgres + Redis on Render instead). Brings up just
+# the two stateful services; db/, api/, and worker/ still run directly with
+# `npm start`/`npm run dev` against these.
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: library_tracker
+      POSTGRES_PASSWORD: library_tracker
+      POSTGRES_DB: library_tracker
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U library_tracker"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  postgres-data:
