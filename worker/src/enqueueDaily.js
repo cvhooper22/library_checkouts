@@ -8,7 +8,12 @@ async function main() {
   const connection = createConnection();
   const queue = new Queue(QUEUE_NAME, { connection });
 
-  const accounts = await prisma.account.findMany({ select: { id: true } });
+  // Demo household's account(s) are reseeded directly by reseed-demo.js on their
+  // own schedule and must never land on this queue — see adr/0002-demo-mode.md.
+  const accounts = await prisma.account.findMany({
+    where: { household: { isDemo: false } },
+    select: { id: true },
+  });
   for (const account of accounts) {
     await queue.add('scrape', { accountId: account.id });
   }

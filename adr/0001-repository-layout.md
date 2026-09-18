@@ -45,10 +45,22 @@ library_checkouts/
 │           ├── index.js        # REGISTRY: scraper_type -> module, + getScraper() (architecture.md §2)
 │           ├── validate.js     # ajv schema enforcing the scrape() contract before any DB write
 │           ├── koha.js         # any Koha OPAC (ByWater-hosted or otherwise) — config.baseUrl varies
-│           └── bibliocommons.js
+│           ├── bibliocommons.js
+│           └── demo.js         # synthetic data only — never dispatched via the queue, see adr/0002-demo-mode.md
 │
-├── api/                        # @library-tracker/api — not yet implemented (architecture.md §6)
+├── api/                        # @library-tracker/api — Express, token auth (architecture.md §6)
 │   └── src/
+│       ├── index.js            # app entrypoint — mounts /auth (public), then authenticate + demoReadOnly, then routes
+│       ├── crypto.js           # encrypt-only; duplicated from worker/src/crypto.js (independent packages, see this ADR)
+│       ├── queue.js            # BullMQ producer for POST /accounts/:id/refresh
+│       ├── authz.js            # household-membership check shared by the route handlers
+│       ├── middleware/
+│       │   ├── authenticate.js
+│       │   └── demoReadOnly.js # the single chokepoint enforcing demo-token read-only-ness
+│       └── routes/
+│           ├── auth.js         # POST /auth/login, POST /auth/demo
+│           ├── households.js
+│           └── accounts.js
 │
 └── frontend/                   # not yet implemented
     └── src/

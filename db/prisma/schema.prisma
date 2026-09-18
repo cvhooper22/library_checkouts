@@ -23,6 +23,7 @@ model Household {
   id          String   @id @default(uuid()) @db.Uuid
   name        String
   ownerUserId String   @map("owner_user_id") @db.Uuid
+  isDemo      Boolean  @default(false) @map("is_demo")
   createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
 
   owner   User              @relation("HouseholdOwner", fields: [ownerUserId], references: [id])
