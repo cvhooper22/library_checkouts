@@ -44,10 +44,8 @@ export function fromApi(checkouts) {
 /**
  * @param {Date | null} updatedAt
  * @param {Date} now
- * @param {boolean} refreshing
  */
-export function pulledLabel(updatedAt, now, refreshing) {
-	if (refreshing) return 'Pulling records…';
+export function pulledLabel(updatedAt, now) {
 	if (!updatedAt) return 'Never pulled';
 	const mins = Math.round((now.getTime() - updatedAt.getTime()) / 60000);
 	if (mins <= 0) return 'Pulled just now';

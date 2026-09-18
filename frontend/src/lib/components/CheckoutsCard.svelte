@@ -1,6 +1,7 @@
 <script>
 	import { dueState, kpiInk, stampVars, styleVars } from '$lib/styles/tokens.js';
 	import { bucketOf, pad2, pulledLabel } from '$lib/checkouts.js';
+	import { canReload, refreshLabel } from '$lib/refresh.js';
 	import CatalogTabs from './CatalogTabs.svelte';
 	import PaperCard from './PaperCard.svelte';
 
@@ -15,8 +16,9 @@
 	 *   holder?: string,
 	 *   holderFor?: (account: import('$lib/checkouts.js').AccountTab) => string,
 	 *   updatedAt?: Date | null,
-	 *   refreshing?: boolean,
-	 *   onRefresh?: () => void,
+	 *   refresh?: import('$lib/refresh.js').RefreshPhase,
+	 *   onRefresh?: (accountId: string | null) => void,
+	 *   onReload?: () => void,
 	 *   onSignOut?: () => void,
 	 *   onManageCards?: () => void,
 	 *   now?: Date
@@ -30,8 +32,9 @@
 		holder,
 		holderFor,
 		updatedAt = null,
-		refreshing = false,
+		refresh = 'idle',
 		onRefresh,
+		onReload,
 		onSignOut,
 		onManageCards,
 		now = new Date()
@@ -57,6 +60,12 @@
 		}))
 	);
 
+	// Tabs come from the checkouts themselves, so a reload after returning a card's last book drops
+	// its tab; fall back to "All" rather than filtering by an id that no longer has a tab.
+	$effect(() => {
+		if (selected !== ALL && !accounts.some((a) => a.id === selected)) selected = ALL;
+	});
+
 	const selectedAccount = $derived(accounts.find((a) => a.id === selected));
 	const selectedName = $derived(selectedAccount?.name);
 	// The card belongs to whoever's tab is open; the household's holder line is for "All".
@@ -73,6 +82,15 @@
 	function selectTab(id) {
 		if (id === CARDS) onManageCards?.();
 		else selected = id;
+	}
+
+	// One button, two jobs: it starts a pull, and once a pull has landed it becomes the reload.
+	const reloadable = $derived(canReload(refresh));
+	const action = $derived(reloadable ? onReload : onRefresh);
+
+	function pressAction() {
+		if (reloadable) onReload?.();
+		else onRefresh?.(selected === ALL ? null : selected);
 	}
 </script>
 
@@ -151,10 +169,12 @@
 		<footer class="foot">
 			<div class="foot-meta">
 				<span class="seal" aria-hidden="true">LC</span>
-				<span class="updated" aria-live="polite">{pulledLabel(updatedAt, now, refreshing)}</span>
+				<span class="updated" aria-live="polite">
+					{refreshLabel(refresh) ?? pulledLabel(updatedAt, now)}
+				</span>
 			</div>
-			<button class="refresh" onclick={onRefresh} disabled={refreshing || !onRefresh}>
-				Re-stamp
+			<button class="refresh" onclick={pressAction} disabled={refresh === 'running' || !action}>
+				{reloadable ? 'Reload' : 'Re-stamp'}
 			</button>
 		</footer>
 	</PaperCard>
