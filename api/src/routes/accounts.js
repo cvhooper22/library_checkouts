@@ -1,57 +1,43 @@
 const express = require('express');
 const prisma = require('@library-tracker/db');
-const { isHouseholdMember } = require('../authz');
-const { getQueue } = require('../queue');
+const { requireAccountAccess } = require('../auth/middleware');
+const { enqueueRefresh } = require('../queue');
 
 const router = express.Router();
 
-async function loadAuthorizedAccount(req, res) {
-  const account = await prisma.account.findUnique({ where: { id: req.params.id } });
-  if (!account) {
-    res.status(404).json({ error: 'Account not found' });
-    return null;
-  }
-  if (!(await isHouseholdMember(account.householdId, req.auth.userId))) {
-    res.status(403).json({ error: 'Not a member of this household' });
-    return null;
-  }
-  return account;
-}
-
-// Run history for one account — debugging/status, per architecture.md §6.
-router.get('/:id/runs', async (req, res) => {
-  const account = await loadAuthorizedAccount(req, res);
-  if (!account) return;
-
+router.get('/:id/runs', requireAccountAccess, async (req, res) => {
   const runs = await prisma.run.findMany({
-    where: { accountId: account.id },
+    where: { accountId: req.params.id },
     orderBy: { startedAt: 'desc' },
   });
   res.json({ runs });
 });
 
-// Poll endpoint for the frontend's "refreshing..." UI.
-router.get('/:id/status', async (req, res) => {
-  const account = await loadAuthorizedAccount(req, res);
-  if (!account) return;
-
-  res.json({ lastRunAt: account.lastRunAt, lastStatus: account.lastStatus });
+// Poll endpoint for frontend "refreshing…" UI (architecture.md §6).
+router.get('/:id/status', requireAccountAccess, async (req, res) => {
+  const latestRun = await prisma.run.findFirst({
+    where: { accountId: req.params.id },
+    orderBy: { startedAt: 'desc' },
+  });
+  res.json({
+    accountId: req.account.id,
+    lastRunAt: req.account.lastRunAt,
+    lastStatus: req.account.lastStatus,
+    latestRun,
+  });
 });
 
-// Enqueues an on-demand scrape job. This is the endpoint demoReadOnly exists to
-// block — a demo-scoped token never reaches the queue (adr/0002-demo-mode.md).
-//
-// Note: architecture.md §6 describes this as returning a `run_id`, but the
-// `runs` row is only created by the worker once it dequeues the job (see
-// worker/src/index.js processJob), not at enqueue time — so there's no run id
-// yet to hand back. Returning the BullMQ job id here instead; the frontend
-// should poll /accounts/:id/status rather than treat this as a run id.
-router.post('/:id/refresh', async (req, res) => {
-  const account = await loadAuthorizedAccount(req, res);
-  if (!account) return;
+// Enqueues an on-demand scrape and creates its `runs` row up front so the
+// response can carry a real run_id immediately, per architecture.md §6. The
+// worker (worker/src/index.js) fills in scraperVersion once it picks the job up.
+router.post('/:id/refresh', requireAccountAccess, async (req, res) => {
+  const run = await prisma.run.create({
+    data: { accountId: req.account.id, status: 'running', scraperVersion: 'pending' },
+  });
 
-  const job = await getQueue().add('scrape', { accountId: account.id });
-  res.status(202).json({ jobId: job.id });
+  await enqueueRefresh({ accountId: req.account.id, runId: run.id });
+
+  res.status(202).json({ runId: run.id, status: run.status });
 });
 
 module.exports = router;

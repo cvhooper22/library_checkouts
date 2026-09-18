@@ -58,14 +58,23 @@ async function applyScrapeResult({ account, run, checkouts }) {
 
 // One BullMQ job = one account scrape. Steps follow architecture.md §5.
 async function processJob(job) {
-  const { accountId } = job.data;
+  const { accountId, runId } = job.data;
 
   const account = await prisma.account.findUniqueOrThrow({ where: { id: accountId } });
   const scraper = getScraper(account.scraperType);
 
-  const run = await prisma.run.create({
-    data: { accountId: account.id, status: 'running', scraperVersion: SCRAPER_VERSION },
-  });
+  // The on-demand /accounts/:id/refresh endpoint (api/src/routes/accounts.js)
+  // creates the `runs` row itself so it can hand the caller a real run_id right
+  // away, then passes runId through the job. The daily cron path (enqueueDaily.js)
+  // only ever sends { accountId }, so it still gets a run row created here.
+  const run = runId
+    ? await prisma.run.update({
+        where: { id: runId },
+        data: { status: 'running', scraperVersion: SCRAPER_VERSION },
+      })
+    : await prisma.run.create({
+        data: { accountId: account.id, status: 'running', scraperVersion: SCRAPER_VERSION },
+      });
 
   try {
     const credentials = decryptCredentials(account.credentialsEncrypted);

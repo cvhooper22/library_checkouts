@@ -2,10 +2,11 @@
   "name": "@library-tracker/api",
   "version": "0.1.0",
   "private": true,
-  "description": "Token-based auth API — households, accounts, runs, on-demand refresh. See architecture.md §6.",
+  "description": "Express API: auth, household/account reads, on-demand refresh trigger.",
   "main": "src/index.js",
   "scripts": {
-    "start": "node src/index.js"
+    "start": "node src/index.js",
+    "dev": "node --watch --env-file=.env src/index.js"
   },
   "dependencies": {
     "@library-tracker/db": "file:../db",
@@ -17,8 +18,5 @@
     "google-auth-library": "^11.1.0",
     "ioredis": "^6.0.0",
     "jsonwebtoken": "^9.0.3"
-  },
-  "devDependencies": {
-    "dotenv": "^18.0.0"
   }
 }

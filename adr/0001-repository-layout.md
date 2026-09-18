@@ -50,15 +50,17 @@ library_checkouts/
 │
 ├── api/                        # @library-tracker/api — Express, token auth (architecture.md §6)
 │   └── src/
-│       ├── index.js            # app entrypoint — mounts /auth (public), then authenticate + demoReadOnly, then routes
+│       ├── index.js            # process entrypoint — listens on PORT
+│       ├── app.js              # createApp(): mounts /auth (public), then authenticate + demoReadOnly, then routes
 │       ├── crypto.js           # encrypt-only; duplicated from worker/src/crypto.js (independent packages, see this ADR)
 │       ├── queue.js            # BullMQ producer for POST /accounts/:id/refresh
-│       ├── authz.js            # household-membership check shared by the route handlers
-│       ├── middleware/
-│       │   ├── authenticate.js
-│       │   └── demoReadOnly.js # the single chokepoint enforcing demo-token read-only-ness
+│       ├── auth/
+│       │   ├── tokens.js       # JWT sign/verify; carries the `demo` claim
+│       │   └── middleware.js   # authenticate, demoReadOnly (the single chokepoint enforcing demo-token read-only-ness), household/account membership checks
+│       ├── lib/
+│       │   └── errors.js       # HttpError + the shared error handler
 │       └── routes/
-│           ├── auth.js         # POST /auth/login, POST /auth/demo
+│           ├── auth.js         # POST /auth/register, /auth/login, /auth/google, /auth/demo
 │           ├── households.js
 │           └── accounts.js
 │

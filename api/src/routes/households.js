@@ -1,57 +1,44 @@
 const express = require('express');
 const prisma = require('@library-tracker/db');
-const { isHouseholdMember } = require('../authz');
+const { requireHouseholdMember } = require('../auth/middleware');
 const { encryptCredentials } = require('../crypto');
+const { HttpError } = require('../lib/errors');
 
 const router = express.Router();
 
-// Current (non-returned) checkouts across every account in a household — the
-// query pattern from architecture.md §4.
-router.get('/:id/checkouts', async (req, res) => {
-  const householdId = req.params.id;
-  if (!(await isHouseholdMember(householdId, req.auth.userId))) {
-    return res.status(403).json({ error: 'Not a member of this household' });
-  }
-
+// Current (non-returned) checkouts across every account in the household —
+// the query pattern from architecture.md §4.
+router.get('/:id/checkouts', requireHouseholdMember, async (req, res) => {
   const checkouts = await prisma.checkout.findMany({
-    where: { account: { householdId }, returnedAt: null },
+    where: { returnedAt: null, account: { householdId: req.params.id } },
     orderBy: { dueDate: 'asc' },
+    include: { account: { select: { id: true, displayName: true } } },
   });
   res.json({ checkouts });
 });
 
-// Add a new library account to a household. Credentials are encrypted before
-// storage and never echoed back — see architecture.md §6.
-router.post('/:id/accounts', async (req, res) => {
-  const householdId = req.params.id;
-  if (!(await isHouseholdMember(householdId, req.auth.userId))) {
-    return res.status(403).json({ error: 'Not a member of this household' });
-  }
-
-  const { displayName, libraryId, scraperType, scraperConfig, credentials } = req.body || {};
+// Adds a library account to the household. Credentials are encrypted here and
+// never stored or returned in plaintext (architecture.md §6).
+router.post('/:id/accounts', requireHouseholdMember, async (req, res) => {
+  const { displayName, libraryId, scraperType, scraperConfig, credentials, scheduleCron } = req.body || {};
   if (!displayName || !libraryId || !scraperType || !credentials) {
-    return res
-      .status(400)
-      .json({ error: 'displayName, libraryId, scraperType, and credentials are required' });
+    throw new HttpError(400, 'displayName, libraryId, scraperType, and credentials are required');
   }
 
   const account = await prisma.account.create({
     data: {
-      householdId,
+      householdId: req.params.id,
       displayName,
       libraryId,
       scraperType,
-      scraperConfig: scraperConfig ?? {},
+      scraperConfig: scraperConfig || {},
       credentialsEncrypted: encryptCredentials(credentials),
+      ...(scheduleCron ? { scheduleCron } : {}),
     },
   });
 
-  res.status(201).json({
-    id: account.id,
-    displayName: account.displayName,
-    libraryId: account.libraryId,
-    scraperType: account.scraperType,
-  });
+  const { credentialsEncrypted, ...safeAccount } = account;
+  res.status(201).json({ account: safeAccount });
 });
 
 module.exports = router;

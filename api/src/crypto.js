@@ -1,11 +1,8 @@
 const crypto = require('crypto');
 
-// Mirrors worker/src/crypto.js's encrypt half. Duplicated rather than shared
-// because api/ and worker/ are independent packages with no dependency between
-// them (adr/0001-repository-layout.md) — both must use the same
-// CREDENTIAL_ENCRYPTION_KEY so the worker can decrypt what the API writes.
-// Decryption only ever happens in the worker (architecture.md §6), so this
-// file intentionally has no decrypt half.
+// Mirrors worker/src/crypto.js — must stay byte-for-byte compatible since the
+// worker is what decrypts these blobs at scrape time. Only encryption is needed
+// here; decryption only ever happens in the worker process (architecture.md §6).
 const ALGORITHM = 'aes-256-gcm';
 const IV_LENGTH = 12;
 
@@ -21,6 +18,7 @@ function getKey() {
   return key;
 }
 
+// Encrypts a credentials object into the base64 blob stored in accounts.credentials_encrypted.
 function encryptCredentials(credentialsObject) {
   const key = getKey();
   const iv = crypto.randomBytes(IV_LENGTH);
