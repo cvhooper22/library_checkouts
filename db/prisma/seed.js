@@ -35,8 +35,8 @@ async function main() {
   });
 
   const libraries = [
-    { id: '00000000-0000-0000-0000-000000000010', name: 'Demo Koha Library', baseUrl: 'https://demo.koha-library.example', scraperTypeDefault: 'koha' },
-    { id: '00000000-0000-0000-0000-000000000011', name: 'Demo BiblioCommons Library', baseUrl: 'https://demo.bibliocommons.example', scraperTypeDefault: 'bibliocommons' },
+    { id: '00000000-0000-0000-0000-000000000010', slug: 'demo-koha-library', name: 'Demo Koha Library', baseUrl: 'https://demo.koha-library.example', scraperTypeDefault: 'koha' },
+    { id: '00000000-0000-0000-0000-000000000011', slug: 'demo-bibliocommons-library', name: 'Demo BiblioCommons Library', baseUrl: 'https://demo.bibliocommons.example', scraperTypeDefault: 'bibliocommons' },
   ];
   for (const library of libraries) {
     await prisma.library.upsert({ where: { id: library.id }, update: {}, create: library });
