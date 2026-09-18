@@ -9,6 +9,7 @@
     "enqueue-daily": "node src/enqueueDaily.js",
     "enqueue-daily:dev": "node --env-file=.env src/enqueueDaily.js",
     "reseed-demo": "node scripts/reseed-demo.js",
+    "seed-test-fixtures": "node scripts/seed-test-fixtures.js",
     "scrape-local": "node scripts/scrape-local.js"
   },
   "dependencies": {

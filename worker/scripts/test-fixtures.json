@@ -1,0 +1,188 @@
+{
+  "_comment": "Local-dev only. Applied by seed-test-fixtures.js (npm run seed-test-fixtures). Fixed ids make it idempotent and replicable after a DB wipe. initialCheckouts is what a card shows before its first re-stamp; daysFromNow < 0 means overdue. \"enabled\": false keeps a card out of the household (the worker runs one job at a time, so a card that hangs would hold up every other pull); flip it to true and re-run to switch it on.",
+  "householdId": "00000000-0000-0000-0000-000000000001",
+  "libraries": [
+    {
+      "id": "00000000-0000-0000-0000-000000000012",
+      "slug": "test-success",
+      "name": "Test Library (Always Succeeds)",
+      "baseUrl": "https://success.test.invalid",
+      "scraperTypeDefault": "test-success"
+    },
+    {
+      "id": "00000000-0000-0000-0000-000000000013",
+      "slug": "test-failure",
+      "name": "Test Library (Always Fails)",
+      "baseUrl": "https://failure.test.invalid",
+      "scraperTypeDefault": "test-failure"
+    },
+    {
+      "id": "00000000-0000-0000-0000-000000000014",
+      "slug": "test-partial-errors",
+      "name": "Test Library (Partial Errors)",
+      "baseUrl": "https://test-partial-errors.test.invalid",
+      "scraperTypeDefault": "test-partial-errors"
+    },
+    {
+      "id": "00000000-0000-0000-0000-000000000015",
+      "slug": "test-empty",
+      "name": "Test Library (Always Empty)",
+      "baseUrl": "https://test-empty.test.invalid",
+      "scraperTypeDefault": "test-empty"
+    },
+    {
+      "id": "00000000-0000-0000-0000-000000000016",
+      "slug": "test-hang",
+      "name": "Test Library (Hangs)",
+      "baseUrl": "https://test-hang.test.invalid",
+      "scraperTypeDefault": "test-hang"
+    }
+  ],
+  "accounts": [
+    {
+      "id": "00000000-0000-0000-0000-000000000101",
+      "displayName": "Ada",
+      "libraryId": "00000000-0000-0000-0000-000000000012",
+      "scraperType": "test-success",
+      "scraperConfig": {
+        "minDelayMs": 1000,
+        "maxDelayMs": 5000
+      },
+      "credentials": {
+        "username": "test-ada",
+        "pin": "0000"
+      },
+      "initialCheckouts": [
+        {
+          "title": "The Left Hand of Darkness",
+          "daysFromNow": -3
+        },
+        {
+          "title": "Piranesi",
+          "daysFromNow": 5
+        },
+        {
+          "title": "Pachinko",
+          "daysFromNow": 18
+        }
+      ]
+    },
+    {
+      "id": "00000000-0000-0000-0000-000000000102",
+      "displayName": "Ben",
+      "libraryId": "00000000-0000-0000-0000-000000000012",
+      "scraperType": "test-success",
+      "scraperConfig": {
+        "minDelayMs": 1000,
+        "maxDelayMs": 5000
+      },
+      "credentials": {
+        "username": "test-ben",
+        "pin": "0000"
+      },
+      "initialCheckouts": [
+        {
+          "title": "Braiding Sweetgrass",
+          "daysFromNow": 2
+        },
+        {
+          "title": "The Overstory",
+          "daysFromNow": 9
+        }
+      ]
+    },
+    {
+      "id": "00000000-0000-0000-0000-000000000103",
+      "displayName": "Cy",
+      "libraryId": "00000000-0000-0000-0000-000000000013",
+      "scraperType": "test-failure",
+      "scraperConfig": {
+        "delayMs": 1000
+      },
+      "credentials": {
+        "username": "test-cy",
+        "pin": "0000"
+      },
+      "initialCheckouts": [
+        {
+          "title": "Klara and the Sun",
+          "daysFromNow": -1
+        },
+        {
+          "title": "The Warmth of Other Suns",
+          "daysFromNow": 6
+        }
+      ]
+    },
+    {
+      "id": "00000000-0000-0000-0000-000000000104",
+      "displayName": "Dee",
+      "libraryId": "00000000-0000-0000-0000-000000000014",
+      "scraperType": "test-partial-errors",
+      "scraperConfig": {
+        "delayMs": 1000
+      },
+      "credentials": {
+        "username": "test-dee",
+        "pin": "0000"
+      },
+      "initialCheckouts": [
+        {
+          "title": "The Fifth Season",
+          "daysFromNow": 3
+        },
+        {
+          "title": "Station Eleven",
+          "daysFromNow": 12
+        }
+      ]
+    },
+    {
+      "id": "00000000-0000-0000-0000-000000000105",
+      "displayName": "Eli",
+      "libraryId": "00000000-0000-0000-0000-000000000015",
+      "scraperType": "test-empty",
+      "scraperConfig": {
+        "delayMs": 1000
+      },
+      "credentials": {
+        "username": "test-eli",
+        "pin": "0000"
+      },
+      "initialCheckouts": [
+        {
+          "title": "The Dispossessed",
+          "daysFromNow": -2
+        },
+        {
+          "title": "Convenience Store Woman",
+          "daysFromNow": 7
+        }
+      ]
+    },
+    {
+      "id": "00000000-0000-0000-0000-000000000106",
+      "displayName": "Fay",
+      "libraryId": "00000000-0000-0000-0000-000000000016",
+      "scraperType": "test-hang",
+      "scraperConfig": {
+        "delayMs": 200000
+      },
+      "credentials": {
+        "username": "test-fay",
+        "pin": "0000"
+      },
+      "enabled": false,
+      "initialCheckouts": [
+        {
+          "title": "Hyperion",
+          "daysFromNow": 3
+        },
+        {
+          "title": "Sea of Tranquility",
+          "daysFromNow": 15
+        }
+      ]
+    }
+  ]
+}

@@ -15,6 +15,22 @@ const REGISTRY = {
   [demo.id]: demo,
 };
 
+// Local-only fixtures for exercising the queue → worker → frontend path (see
+// worker/scripts/seed-test-fixtures.js). Not registered in production, where a stray
+// `test-*` account would fail with "No scraper registered" instead of running.
+if (process.env.NODE_ENV !== 'production') {
+  const testScrapers = [
+    require('./test-success'),
+    require('./test-failure'),
+    require('./test-partial-errors'),
+    require('./test-empty'),
+    require('./test-hang'),
+  ];
+  for (const scraper of testScrapers) {
+    REGISTRY[scraper.id] = scraper;
+  }
+}
+
 function getScraper(scraperType) {
   const scraper = REGISTRY[scraperType];
   if (!scraper) {
