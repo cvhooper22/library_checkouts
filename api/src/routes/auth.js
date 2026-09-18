@@ -2,9 +2,11 @@ const express = require('express');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const rateLimit = require('express-rate-limit');
+const { OAuth2Client } = require('google-auth-library');
 const prisma = require('@library-tracker/db');
 
 const router = express.Router();
+const googleClient = new OAuth2Client();
 
 function signToken(payload, expiresIn) {
   return jwt.sign(payload, process.env.JWT_SECRET, { expiresIn });
@@ -20,6 +22,47 @@ router.post('/login', async (req, res) => {
   const valid = user && (await bcrypt.compare(password, user.passwordHash));
   if (!valid) {
     return res.status(401).json({ error: 'Invalid email or password' });
+  }
+
+  res.json({ token: signToken({ sub: user.id }, '7d') });
+});
+
+router.post('/google', async (req, res) => {
+  const { idToken } = req.body || {};
+  if (!idToken) {
+    return res.status(400).json({ error: 'idToken is required' });
+  }
+
+  let payload;
+  try {
+    const ticket = await googleClient.verifyIdToken({
+      idToken,
+      audience: process.env.GOOGLE_CLIENT_ID,
+    });
+    payload = ticket.getPayload();
+  } catch (error) {
+    return res.status(401).json({ error: 'Invalid Google token' });
+  }
+
+  // Google itself attests this, so it's safe to tell the caller directly —
+  // they already hold a signed token proving they control this Google
+  // session, unlike an anonymous /login attempt where vagueness matters.
+  if (!payload.email_verified) {
+    return res.status(401).json({
+      error: "Your Google account's email isn't verified. Verify it with Google, then try again.",
+    });
+  }
+
+  // `sub` is Google's stable per-account identifier; email is only used to
+  // link a Google sign-in to an existing password account, since Google has
+  // already verified the caller owns that address.
+  let user = await prisma.user.findUnique({ where: { googleId: payload.sub } });
+  if (!user) {
+    user = await prisma.user.upsert({
+      where: { email: payload.email },
+      update: { googleId: payload.sub },
+      create: { email: payload.email, googleId: payload.sub },
+    });
   }
 
   res.json({ token: signToken({ sub: user.id }, '7d') });
