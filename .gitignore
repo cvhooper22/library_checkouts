@@ -70,6 +70,10 @@ web_modules/
 .env.*
 !.env.example
 
+# scraper debug artifacts (may contain account data)
+scraper-debug.png
+scraper-debug.html
+
 # parcel-bundler cache (https://parceljs.org/)
 .cache
 .parcel-cache

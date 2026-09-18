@@ -1,0 +1,23 @@
+{
+  "name": "@library-tracker/worker",
+  "version": "0.1.0",
+  "private": true,
+  "description": "BullMQ worker: scraper registry, Puppeteer scrapes, checkout upserts.",
+  "scripts": {
+    "start": "node src/index.js",
+    "enqueue-daily": "node src/enqueueDaily.js",
+    "scrape-local": "node scripts/scrape-local.js"
+  },
+  "dependencies": {
+    "@library-tracker/db": "file:../db",
+    "ajv": "^8.20.0",
+    "bullmq": "^6.3.6",
+    "ioredis": "^6.0.0",
+    "puppeteer": "^25.11.0",
+    "puppeteer-extra": "^3.3.6",
+    "puppeteer-extra-plugin-stealth": "^2.11.2"
+  },
+  "devDependencies": {
+    "dotenv": "^18.0.0"
+  }
+}
