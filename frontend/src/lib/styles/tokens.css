@@ -1,0 +1,159 @@
+/* Date Due — design tokens (whole look & feel)
+   Covers the checkouts card, the accounts card, and the sign-in form.
+   Import once at the app root: `import './tokens.css'` in src/routes/+layout.svelte
+   (or src/app.css). Theme by overriding on :root or any ancestor. */
+
+:root {
+  /* ── paper ───────────────────────────────────────────── */
+  --dd-paper: #efe3c6;              /* card stock */
+  --dd-paper-raised: #fffbf0;       /* inset control on card (Google button) */
+  --dd-paper-raised-hover: #fff7e4;
+  --dd-paper-tab: #e2d4b4;          /* inactive catalog tab */
+  --dd-paper-tab-active: var(--dd-paper);
+  --dd-paper-tab-alt: #e6d9bc;      /* dashed utility tab (sign out) */
+  --dd-page: #ede6d8;               /* desk / page ground behind cards */
+  --dd-surface: #fffdf8;            /* plain app card (non-stock surfaces) */
+  --dd-surface-sunk: #f6f1e7;       /* header band, quiet fill */
+  --dd-panel: rgba(58, 80, 104, 0.05);   /* KPI block ground */
+  --dd-panel-head: rgba(58, 80, 104, 0.06); /* ledger column-header band */
+  --dd-bloom: radial-gradient(120% 90% at 12% 0%, rgba(255, 251, 236, 0.85), transparent 60%);
+  --dd-age: radial-gradient(90% 70% at 100% 100%, rgba(150, 124, 74, 0.22), transparent 55%);
+  --dd-patina: var(--dd-bloom), var(--dd-age); /* both, on one ::before */
+  --dd-cover-hatch: repeating-linear-gradient(135deg, rgba(28, 26, 23, 0.1) 0 1px, transparent 1px 6px);
+
+  /* ── ink ─────────────────────────────────────────────── */
+  --dd-ink: #26221c;                /* primary text on card stock */
+  --dd-ink-app: #1c1a17;            /* primary text on app surfaces */
+  --dd-ink-soft: #3a342b;           /* secondary */
+  --dd-ink-call: #4a3f2c;           /* call number block */
+  --dd-ink-label: #5a7391;          /* printed form labels — the blue of the form */
+  --dd-ink-borrower: #6b5c3f;       /* borrower name, sepia */
+  --dd-ink-muted: #6e675c;          /* meta on app surfaces */
+  --dd-ink-tab: #7a6e56;            /* inactive tab label */
+  --dd-ink-link: #8a6a2f;           /* anchors, brass */
+  --dd-ink-on-dark: #f6f1e7;
+  --dd-ink-on-alert: #fffdf8;
+
+  /* ── accents (the only three) ────────────────────────── */
+  --dd-stamp: #2f2a63;              /* violet stamp pad = every action */
+  --dd-stamp-overdue: #8e241a;      /* overdue stamp, also error text */
+  --dd-alert: #b3261e;              /* overdue text, alert chip */
+  --dd-stamp-wash: rgba(47, 42, 99, 0.08);  /* action hover fill */
+  --dd-stamp-hairline: rgba(47, 42, 99, 0.45);
+
+  /* KPI digit ramp — descending urgency */
+  --dd-kpi-overdue: var(--dd-alert);
+  --dd-kpi-week: #a2701a;
+  --dd-kpi-later: #a9b4bf;
+  --dd-kpi-zero: #b9a99a;
+  --dd-kpi-total: var(--dd-ink);
+
+  /* ── printed lines ───────────────────────────────────── */
+  --dd-rule-strong: rgba(58, 80, 104, 0.5);  /* ledger top/bottom, column divider */
+  --dd-rule: rgba(58, 80, 104, 0.45);        /* field underlines */
+  --dd-rule-input: rgba(58, 80, 104, 0.55);  /* input underline, resting */
+  --dd-rule-soft: rgba(58, 80, 104, 0.32);   /* row separators */
+  --dd-rule-faint: rgba(58, 80, 104, 0.35);  /* KPI underline, default */
+  --dd-rule-alert: rgba(179, 38, 30, 0.55);  /* KPI underline, overdue */
+  --dd-rule-box: rgba(58, 80, 104, 0.4);     /* KPI / card-holder box */
+  --dd-rule-mark: rgba(58, 80, 104, 0.6);    /* checkbox, LC roundel */
+  --dd-edge: rgba(38, 34, 28, 0.32);         /* card die-cut edge */
+  --dd-edge-soft: rgba(38, 34, 28, 0.28);    /* tab edge */
+  --dd-hair-app: rgba(28, 26, 23, 0.08);     /* row rule on app surfaces */
+  --dd-hair-app-strong: rgba(28, 26, 23, 0.12);
+
+  /* ── type ────────────────────────────────────────────── */
+  --dd-font-display: Oswald, "Arial Narrow", sans-serif; /* stamps, numerals, actions */
+  --dd-font-text: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --dd-font-mono: ui-monospace, Menlo, monospace;
+
+  --dd-text-kpi: 27px;      /* KPI numeral, display 600, tabular */
+  --dd-text-title: 19px;    /* card headline, 600 / -0.2px */
+  --dd-text-stamp: 19px;    /* date stamp, display 600 / 0.06em */
+  --dd-text-input: 17px;    /* form input value */
+  --dd-text-cardno: 17px;   /* № — display 600 / 0.05em */
+  --dd-text-subject: 15px;  /* second ruled field, -0.1px */
+  --dd-text-row: 14.5px;    /* book title in ledger, 600 / -0.2px */
+  --dd-text-action: 12.5px; /* button label, display 600 / 0.18–0.2em */
+  --dd-text-callno: 13px;
+  --dd-text-meta: 10.5px;   /* relative due, 700 / 0.05em, tabular */
+  --dd-text-caption: 10px;  /* borrower, 700 / 0.16em */
+  --dd-text-tab: 9.5px;     /* 700 / 0.12em */
+  --dd-text-label: 8.5px;   /* printed labels, 700 / 0.18–0.2em */
+  --dd-text-label-sm: 8px;  /* KPI captions, 700 / 0.14em */
+
+  --dd-track-label: 0.2em;
+  --dd-track-label-tight: 0.18em;
+  --dd-track-action: 0.18em;
+  --dd-track-caption: 0.16em;
+  --dd-track-kpi: 0.14em;
+  --dd-track-tab: 0.12em;
+  --dd-track-display: 0.06em;
+  --dd-track-title: -0.2px;
+
+  /* ── space (card rhythm: 3 / 5 / 8 / 12 / 16 / 20 / 22) ─ */
+  --dd-space-1: 3px;
+  --dd-space-2: 5px;
+  --dd-space-3: 8px;
+  --dd-space-4: 12px;
+  --dd-space-5: 16px;
+  --dd-space-6: 20px;
+  --dd-space-7: 22px;
+  --dd-field-gap: var(--dd-space-6); /* between ruled form fields */
+  --dd-gutter: var(--dd-space-6);    /* card side padding */
+  --dd-date-col: 104px;              /* DATE DUE column width */
+  --dd-row-min-h: 44px;              /* = minimum touch target */
+  --dd-card-width: 430px;
+  --dd-tab-offset: 14px;             /* tab strip inset from card edge */
+
+  /* ── form ────────────────────────────────────────────── */
+  --dd-radius-card: 3px;
+  --dd-radius-tab: 5px 5px 0 0;
+  --dd-radius-button: 2px;
+  --dd-radius-pill: 999px;
+  --dd-border-action: 1.5px solid var(--dd-stamp);
+  --dd-shadow-card: 0 3px 0 rgba(38, 34, 28, 0.06), 0 14px 26px rgba(38, 34, 28, 0.18);
+  --dd-shadow-raised: 0 2px 0 rgba(38, 34, 28, 0.08);
+  --dd-shadow-tab-active: 0 -1px 0 rgba(38, 34, 28, 0.35);
+  --dd-shadow-tab-inactive: inset 0 -3px 5px rgba(38, 34, 28, 0.09);
+  --dd-shadow-app-card: 0 2px 14px rgba(28, 26, 23, 0.09);
+
+  /* ── stamp character (per-row jitter set inline) ─────── */
+  --dd-stamp-rotate: 0deg;   /* row override: ((hash % 5) - 2) * 0.9deg */
+  --dd-stamp-wear: 0.8;      /* row override: 0.62 + (hash % 4) * 0.09 */
+  --dd-action-tilt: -1.2deg; /* rubber-stamped button */
+  --dd-spin: spin 0.8s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+@media (prefers-reduced-motion: reduce) {
+  :root { --dd-stamp-rotate: 0deg; --dd-action-tilt: 0deg; --dd-spin: none; }
+}
+
+/* Later-era green ledger stock */
+[data-theme="ledger"] {
+  --dd-paper: #e6e9dd;
+  --dd-paper-tab: #d7dccb;
+  --dd-page: #dfe3d6;
+  --dd-panel: rgba(45, 74, 58, 0.05);
+  --dd-panel-head: rgba(45, 74, 58, 0.06);
+  --dd-ink: #1d211c;
+  --dd-ink-soft: #333a31;
+  --dd-ink-borrower: #4c5a48;
+  --dd-ink-label: #5b7a66;
+  --dd-rule-strong: rgba(45, 74, 58, 0.5);
+  --dd-rule: rgba(45, 74, 58, 0.45);
+  --dd-rule-soft: rgba(45, 74, 58, 0.32);
+  --dd-rule-faint: rgba(45, 74, 58, 0.35);
+  --dd-stamp: #23342a;
+}
+
+/* Dark reading room — card stays paper, the desk goes dark */
+[data-theme="night"] {
+  --dd-page: #1c1a17;
+  --dd-paper: #ded1b2;
+  --dd-paper-tab: #c9bb9b;
+  --dd-paper-raised: #f0e5c9;
+  --dd-shadow-card: 0 3px 0 rgba(0, 0, 0, 0.2), 0 18px 34px rgba(0, 0, 0, 0.45);
+}
