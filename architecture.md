@@ -94,9 +94,12 @@ Reference table of known libraries and their default scraper.
 | Column | Type | Notes |
 |---|---|---|
 | `id` | uuid, PK | |
+| `slug` | text, unique | stable public identifier |
 | `name` | text | |
 | `base_url` | text | |
 | `scraper_type_default` | text | FK-like reference to a registry key, not an enforced FK |
+| `is_active` | boolean | false hides it from `GET /libraries` without breaking accounts that reference it |
+| `city`, `state`, `postal_code` | text, nullable | for filtering; a many-to-many service-area table is the path to real zip lookup |
 
 ### `accounts`
 A single library card belonging to a household.

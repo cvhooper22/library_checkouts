@@ -47,7 +47,8 @@ async function ensureDemoLibrary() {
   const existing = await prisma.library.findFirst({ where: { scraperTypeDefault: 'demo' } });
   if (existing) return existing;
   return prisma.library.create({
-    data: { name: DEMO_LIBRARY_NAME, baseUrl: 'https://demo.invalid', scraperTypeDefault: 'demo' },
+    // isActive: false keeps it out of GET /libraries — the demo scraper isn't a real choice.
+    data: { slug: 'demo', name: DEMO_LIBRARY_NAME, baseUrl: 'https://demo.invalid', scraperTypeDefault: 'demo', isActive: false },
   });
 }
 
