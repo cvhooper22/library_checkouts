@@ -8,11 +8,13 @@
     "dev": "node --env-file=.env src/index.js",
     "enqueue-daily": "node src/enqueueDaily.js",
     "enqueue-daily:dev": "node --env-file=.env src/enqueueDaily.js",
+    "reseed-demo": "node scripts/reseed-demo.js",
     "scrape-local": "node scripts/scrape-local.js"
   },
   "dependencies": {
     "@library-tracker/db": "file:../db",
     "ajv": "^8.20.0",
+    "bcryptjs": "^2.4.3",
     "bullmq": "^6.3.6",
     "ioredis": "^6.0.0",
     "puppeteer": "^25.11.0",

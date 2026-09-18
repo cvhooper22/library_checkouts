@@ -1,11 +1,11 @@
 const express = require('express');
 const prisma = require('@library-tracker/db');
-const { authenticate, requireAccountAccess } = require('../auth/middleware');
+const { requireAccountAccess } = require('../auth/middleware');
 const { enqueueRefresh } = require('../queue');
 
 const router = express.Router();
 
-router.get('/:id/runs', authenticate, requireAccountAccess, async (req, res) => {
+router.get('/:id/runs', requireAccountAccess, async (req, res) => {
   const runs = await prisma.run.findMany({
     where: { accountId: req.params.id },
     orderBy: { startedAt: 'desc' },
@@ -14,7 +14,7 @@ router.get('/:id/runs', authenticate, requireAccountAccess, async (req, res) => 
 });
 
 // Poll endpoint for frontend "refreshing…" UI (architecture.md §6).
-router.get('/:id/status', authenticate, requireAccountAccess, async (req, res) => {
+router.get('/:id/status', requireAccountAccess, async (req, res) => {
   const latestRun = await prisma.run.findFirst({
     where: { accountId: req.params.id },
     orderBy: { startedAt: 'desc' },
@@ -30,7 +30,7 @@ router.get('/:id/status', authenticate, requireAccountAccess, async (req, res) =
 // Enqueues an on-demand scrape and creates its `runs` row up front so the
 // response can carry a real run_id immediately, per architecture.md §6. The
 // worker (worker/src/index.js) fills in scraperVersion once it picks the job up.
-router.post('/:id/refresh', authenticate, requireAccountAccess, async (req, res) => {
+router.post('/:id/refresh', requireAccountAccess, async (req, res) => {
   const run = await prisma.run.create({
     data: { accountId: req.account.id, status: 'running', scraperVersion: 'pending' },
   });

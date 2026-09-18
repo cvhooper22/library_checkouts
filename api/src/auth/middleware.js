@@ -12,9 +12,20 @@ function authenticate(req, res, next) {
     throw new HttpError(401, 'Missing or malformed Authorization header');
   }
   try {
-    req.userId = verifyToken(token);
+    ({ userId: req.userId, demo: req.demo } = verifyToken(token));
   } catch {
     throw new HttpError(401, 'Invalid or expired token');
+  }
+  next();
+}
+
+// Single enforcement point for "demo mode is read-only" — see
+// adr/0002-demo-mode.md decision 6. Mounted once in app.js, right after
+// authenticate and ahead of every protected route, so a new mutating route is
+// safe by default; nothing per-handler needs to remember an isDemo check.
+function demoReadOnly(req, res, next) {
+  if (req.demo && req.method !== 'GET') {
+    throw new HttpError(403, 'The demo account is read-only.');
   }
   next();
 }
@@ -47,4 +58,4 @@ async function requireAccountAccess(req, res, next) {
   next();
 }
 
-module.exports = { authenticate, requireHouseholdMember, requireAccountAccess };
+module.exports = { authenticate, demoReadOnly, requireHouseholdMember, requireAccountAccess };

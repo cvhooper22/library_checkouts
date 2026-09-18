@@ -66,6 +66,7 @@ Groups people who share a dashboard. Distinct from `accounts`, which are library
 | `id` | uuid, PK | |
 | `name` | text | e.g. "The Smiths" |
 | `owner_user_id` | uuid, FK → `users.id` | |
+| `is_demo` | boolean, default `false` | marks the one shared, read-only demo household — see adr/0002-demo-mode.md |
 | `created_at` | timestamptz | |
 
 ### `household_members`
@@ -184,6 +185,7 @@ Small Express/Fastify service. Token-based auth from day one (not cookie/session
 | Method | Path | Purpose |
 |---|---|---|
 | `POST` | `/auth/login` | Returns a token |
+| `POST` | `/auth/demo` | No credentials required — returns a token scoped to the shared demo household, for the "Try it out" flow. Gated by `DEMO_MODE_ENABLED`, rate-limited independently of `/auth/login`. See adr/0002-demo-mode.md |
 | `GET` | `/households/:id/checkouts` | Current (non-returned) checkouts across all accounts in a household |
 | `GET` | `/accounts/:id/runs` | Run history for one account (debugging/status) |
 | `POST` | `/accounts/:id/refresh` | Enqueues an on-demand scrape job for one account |
@@ -216,6 +218,7 @@ Notes:
 | Token-based auth, not sessions | Electron/mobile clients planned; stateless tokens avoid an auth rewrite later. |
 | Queue (BullMQ/Redis) between triggers and worker | Both cron and on-demand hit the same queue — avoids duplicate scrape logic and gives retries/concurrency control for free. |
 | Credentials encrypted at rest, decrypted only in worker memory | This system is explicitly planned to hold other people's library credentials eventually — worth taking seriously from v1. |
+| Demo mode: one shared, read-only household, never enqueued | A public, credential-less "Try it out" button must never be able to reach the shared BullMQ queue. The `demo` scraper is registered like any other but is only ever called in-process by a reseed script on its own schedule — never dispatched as a job. Read-only-ness is enforced by one global middleware keyed off a `demo` token claim, not per-handler checks. See adr/0002-demo-mode.md. |
 | Scraper contract requires `externalId` per checkout | Title-only matching breaks across services with duplicate titles or re-issued due dates; a stable per-item ID (or `title + due_date` fallback) is the upsert key so "returned" detection works uniformly regardless of which scraper produced the row. |
 
 ---

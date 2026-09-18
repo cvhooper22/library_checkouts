@@ -1,6 +1,6 @@
 const express = require('express');
 const prisma = require('@library-tracker/db');
-const { authenticate, requireHouseholdMember } = require('../auth/middleware');
+const { requireHouseholdMember } = require('../auth/middleware');
 const { encryptCredentials } = require('../crypto');
 const { HttpError } = require('../lib/errors');
 
@@ -8,7 +8,7 @@ const router = express.Router();
 
 // Current (non-returned) checkouts across every account in the household —
 // the query pattern from architecture.md §4.
-router.get('/:id/checkouts', authenticate, requireHouseholdMember, async (req, res) => {
+router.get('/:id/checkouts', requireHouseholdMember, async (req, res) => {
   const checkouts = await prisma.checkout.findMany({
     where: { returnedAt: null, account: { householdId: req.params.id } },
     orderBy: { dueDate: 'asc' },
@@ -19,7 +19,7 @@ router.get('/:id/checkouts', authenticate, requireHouseholdMember, async (req, r
 
 // Adds a library account to the household. Credentials are encrypted here and
 // never stored or returned in plaintext (architecture.md §6).
-router.post('/:id/accounts', authenticate, requireHouseholdMember, async (req, res) => {
+router.post('/:id/accounts', requireHouseholdMember, async (req, res) => {
   const { displayName, libraryId, scraperType, scraperConfig, credentials, scheduleCron } = req.body || {};
   if (!displayName || !libraryId || !scraperType || !credentials) {
     throw new HttpError(400, 'displayName, libraryId, scraperType, and credentials are required');

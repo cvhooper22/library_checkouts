@@ -213,11 +213,12 @@
       <li><a href="#phase5">Deploy the API service</a></li>
       <li><a href="#phase6">Deploy the background worker</a></li>
       <li><a href="#phase7">Set up the cron job</a></li>
-      <li><a href="#phase8">Deploy the frontend</a></li>
-      <li><a href="#phase9">Wire up environment variables</a></li>
-      <li><a href="#phase10">Add your custom domain</a></li>
-      <li><a href="#phase11">Test the full round trip</a></li>
-      <li><a href="#phase12">Ongoing operations</a></li>
+      <li><a href="#phase8">Set up the demo reseed cron job</a></li>
+      <li><a href="#phase9">Deploy the frontend</a></li>
+      <li><a href="#phase10">Wire up environment variables</a></li>
+      <li><a href="#phase11">Add your custom domain</a></li>
+      <li><a href="#phase12">Test the full round trip</a></li>
+      <li><a href="#phase13">Ongoing operations</a></li>
     </ol>
   </nav>
 
@@ -235,11 +236,15 @@
     src/
   worker/           # BullMQ worker, scraper registry, Puppeteer
     package.json
+    scripts/
+      reseed-demo.js     # separate cron: regenerates demo data, never enqueues
     src/
+      enqueueDaily.js    # daily cron: enqueues real accounts only
       scrapers/
         index.js
         bibliocommons.js
         koha.js
+        demo.js          # synthetic data — called only by reseed-demo.js
   frontend/         # static site (Vite/React/etc.)
     package.json
     src/
@@ -377,16 +382,34 @@ DATABASE_URL="&lt;external-url&gt;" npx knex migrate:latest</code></pre>
       <table>
         <tr><th>Field</th><th>Value</th></tr>
         <tr><td>Schedule</td><td><code>0 6 * * *</code> (6am UTC daily — adjust per timezone need)</td></tr>
-        <tr><td>Command</td><td><code>node src/enqueue-daily.js</code></td></tr>
+        <tr><td>Command</td><td><code>node src/enqueueDaily.js</code></td></tr>
       </table>
-      <p><code>enqueue-daily.js</code> should be a short script: query all <code>accounts</code> due to run, push one job per account onto the same BullMQ queue the worker listens to. It does <em>not</em> run Puppeteer itself — that stays in the worker.</p>
+      <p><code>enqueueDaily.js</code> queries all non-demo <code>accounts</code> and pushes one job per account onto the same BullMQ queue the worker listens to. It does <em>not</em> run Puppeteer itself — that stays in the worker.</p>
     </div>
     <div class="callout"><strong>Pricing note:</strong> Cron Jobs on Render run as a small billed line item (roughly $1/mo) separate from your worker's compute — cheap, but worth knowing it's not bundled into the worker's plan.</div>
   </section>
 
   <!-- PHASE 8 -->
   <section class="phase" id="phase8">
-    <h2><span class="phase-num">8</span> Deploy the frontend</h2>
+    <h2><span class="phase-num">8</span> Set up the demo reseed cron job</h2>
+    <p class="phase-desc">Powers the "Try it out" login button with an always-fresh, shared demo household — without that traffic ever touching the BullMQ queue your real accounts share. See <code>adr/0002-demo-mode.md</code> for the full reasoning.</p>
+    <div class="step">
+      <h3>Create a second, independent Cron Job</h3>
+      <p><strong>New → Cron Job</strong>, same repo, root directory <code>worker</code> (reuses the same Docker image as Phases 6 and 7). Set:</p>
+      <table>
+        <tr><th>Field</th><th>Value</th></tr>
+        <tr><td>Schedule</td><td><code>0 */12 * * *</code> (every 12 hours)</td></tr>
+        <tr><td>Command</td><td><code>node scripts/reseed-demo.js</code></td></tr>
+      </table>
+      <p><code>reseed-demo.js</code> creates the demo user/household/accounts on first run, then fully replaces their <code>runs</code>/<code>checkouts</code> every time it runs, regenerating due dates relative to "today." It calls the <code>demo</code> scraper module directly, in-process — it never enqueues a BullMQ job.</p>
+    </div>
+    <div class="callout"><strong>Keep this a separate Cron Job — do not fold it into Phase 7's schedule or command.</strong> The whole point of demo mode is that a public, credential-less "Try it out" button can never reach the same queue your real accounts' scrapes go through. Merging the two schedules (or having one script do both) would undo that guarantee the moment either script changes.</div>
+    <div class="callout"><strong>Pricing note:</strong> this is a second billed Cron Job (~$1/mo), on top of Phase 7's. Cadence is a cosmetic choice, not a functional one — <code>checkouts.due_date</code> and <code>overdue</code> are static values written at reseed time (architecture.md §4), so the only cost of reseeding less often is demo data visibly aging between runs.</div>
+  </section>
+
+  <!-- PHASE 9 -->
+  <section class="phase" id="phase9">
+    <h2><span class="phase-num">9</span> Deploy the frontend</h2>
     <p class="phase-desc">A static site that calls your API service for data.</p>
     <div class="step">
       <h3>Create a new Static Site</h3>
@@ -401,31 +424,34 @@ DATABASE_URL="&lt;external-url&gt;" npx knex migrate:latest</code></pre>
     </div>
   </section>
 
-  <!-- PHASE 9 -->
-  <section class="phase" id="phase9">
-    <h2><span class="phase-num">9</span> Wire up environment variables</h2>
-    <p class="phase-desc">Both the API and the worker need the same DB and Redis credentials. Render lets you set these once and reference them across services.</p>
+  <!-- PHASE 10 -->
+  <section class="phase" id="phase10">
+    <h2><span class="phase-num">10</span> Wire up environment variables</h2>
+    <p class="phase-desc">The API and the worker need the same DB, Redis, and encryption-key values. Render lets you set these once and reference them across services.</p>
     <div class="step">
       <h3>Set shared env vars on each service</h3>
       <table>
         <tr><th>Variable</th><th>Used by</th><th>Value</th></tr>
-        <tr><td><code>DATABASE_URL</code></td><td>API, Worker, Cron</td><td>Internal Postgres URL from Phase 3</td></tr>
-        <tr><td><code>REDIS_URL</code></td><td>API, Worker, Cron</td><td>Internal Key Value URL from Phase 4</td></tr>
-        <tr><td><code>CREDENTIAL_ENCRYPTION_KEY</code></td><td>Worker</td><td>Generated locally — see below</td></tr>
+        <tr><td><code>DATABASE_URL</code></td><td>API, Worker, both Cron Jobs</td><td>Internal Postgres URL from Phase 3</td></tr>
+        <tr><td><code>REDIS_URL</code></td><td>API, Worker, enqueue Cron Job</td><td>Internal Key Value URL from Phase 4</td></tr>
+        <tr><td><code>CREDENTIAL_ENCRYPTION_KEY</code></td><td>API, Worker, both Cron Jobs</td><td>Generated locally — see below. Must be the <em>same</em> value everywhere: the API encrypts credentials on write, the worker decrypts them at scrape time, and the demo reseed job encrypts a placeholder blob for its own accounts.</td></tr>
+        <tr><td><code>JWT_SECRET</code></td><td>API</td><td>Generated locally the same way — signs and verifies auth tokens, including demo tokens</td></tr>
+        <tr><td><code>DEMO_MODE_ENABLED</code></td><td>API</td><td><code>true</code> — kill switch for <code>POST /auth/demo</code>, flip to <code>false</code> to disable without a deploy</td></tr>
         <tr><td><code>NODE_ENV</code></td><td>All</td><td><code>production</code></td></tr>
       </table>
     </div>
     <div class="step">
-      <h3>Generate a credential encryption key</h3>
-      <p>Locally, generate a strong key once and paste it into Render's dashboard as a secret (never commit it to the repo):</p>
-      <pre><code>openssl rand -base64 32</code></pre>
+      <h3>Generate a credential encryption key and a JWT secret</h3>
+      <p>Locally, generate each as a strong random value and paste them into Render's dashboard as secrets (never commit either to the repo):</p>
+      <pre><code>openssl rand -base64 32   # CREDENTIAL_ENCRYPTION_KEY
+openssl rand -base64 32   # JWT_SECRET</code></pre>
     </div>
     <div class="callout"><strong>Keep secrets out of <code>render.yaml</code> if you commit that file to Git.</strong> Set values marked as secrets directly in the Render dashboard, or use <code>sync: false</code> in <code>render.yaml</code> so Render prompts for them instead of storing them in the repo.</div>
   </section>
 
-  <!-- PHASE 10 -->
-  <section class="phase" id="phase10">
-    <h2><span class="phase-num">10</span> Add your custom domain</h2>
+  <!-- PHASE 11 -->
+  <section class="phase" id="phase11">
+    <h2><span class="phase-num">11</span> Add your custom domain</h2>
     <p class="phase-desc">Free on Render's Hobby plan (two domains included) and Pro plan (25 included, then $0.25/mo each).</p>
     <div class="step">
       <h3>Add the domain to the frontend service</h3>
@@ -445,9 +471,9 @@ DATABASE_URL="&lt;external-url&gt;" npx knex migrate:latest</code></pre>
     </div>
   </section>
 
-  <!-- PHASE 11 -->
-  <section class="phase" id="phase11">
-    <h2><span class="phase-num">11</span> Test the full round trip</h2>
+  <!-- PHASE 12 -->
+  <section class="phase" id="phase12">
+    <h2><span class="phase-num">12</span> Test the full round trip</h2>
     <p class="phase-desc">Confirm every piece talks to every other piece before you trust the daily cron.</p>
     <div class="step">
       <h3>Seed one test account</h3>
@@ -455,7 +481,8 @@ DATABASE_URL="&lt;external-url&gt;" npx knex migrate:latest</code></pre>
     </div>
     <div class="step">
       <h3>Trigger an on-demand refresh</h3>
-      <pre><code>curl -X POST https://api.yourdomain.com/accounts/&lt;account-id&gt;/refresh</code></pre>
+      <pre><code>curl -X POST https://api.yourdomain.com/accounts/&lt;account-id&gt;/refresh \
+  -H "Authorization: Bearer &lt;your-login-token&gt;"</code></pre>
       <p>Watch the worker's logs in the Render dashboard — you should see the job picked up, Puppeteer launch, and a run recorded as <code>success</code> or <code>failed</code> with a reason.</p>
     </div>
     <div class="step">
@@ -466,11 +493,26 @@ DATABASE_URL="&lt;external-url&gt;" npx knex migrate:latest</code></pre>
       <h3>Manually trigger the cron job once</h3>
       <p>From the Cron Job's page in the dashboard, use <strong>Trigger Run</strong> to fire it outside its schedule and confirm it enqueues jobs for every due account, not just your test one.</p>
     </div>
+    <div class="step">
+      <h3>Confirm demo mode works — and is actually read-only</h3>
+      <p>Trigger Phase 8's Cron Job once manually, then check that a demo login returns data and can't mutate anything:</p>
+      <pre><code>curl -X POST https://api.yourdomain.com/auth/demo
+# -&gt; { "token": "...", "householdId": "..." }
+
+curl https://api.yourdomain.com/households/&lt;householdId&gt;/checkouts \
+  -H "Authorization: Bearer &lt;token&gt;"
+# -&gt; populated checkout list
+
+curl -X POST https://api.yourdomain.com/accounts/&lt;demo-account-id&gt;/refresh \
+  -H "Authorization: Bearer &lt;token&gt;"
+# -&gt; 403, "The demo account is read-only."</code></pre>
+      <p>That last 403 is the important one — it's confirming the demo token can never reach the BullMQ queue, not just that the feature "looks read-only" in a UI you haven't built yet.</p>
+    </div>
   </section>
 
-  <!-- PHASE 12 -->
-  <section class="phase" id="phase12">
-    <h2><span class="phase-num">12</span> Ongoing operations</h2>
+  <!-- PHASE 13 -->
+  <section class="phase" id="phase13">
+    <h2><span class="phase-num">13</span> Ongoing operations</h2>
     <p class="phase-desc">A few habits that will save you time once this is running unattended.</p>
     <div class="step">
       <h3>Watch the free-tier sleep behavior</h3>
@@ -495,10 +537,12 @@ DATABASE_URL="&lt;external-url&gt;" npx knex migrate:latest</code></pre>
       <li>API deployed as a Web Service</li>
       <li>Worker deployed as a Background Worker (Starter plan or above)</li>
       <li>Cron Job deployed, enqueues rather than scrapes directly</li>
+      <li>A <em>second</em>, independent Cron Job deployed for <code>reseed-demo.js</code> — never sharing a schedule or command with the enqueue cron</li>
       <li>Frontend deployed as a Static Site, pointed at the API URL</li>
-      <li>Shared env vars (<code>DATABASE_URL</code>, <code>REDIS_URL</code>, encryption key) set on every relevant service</li>
+      <li>Shared env vars (<code>DATABASE_URL</code>, <code>REDIS_URL</code>, encryption key, <code>JWT_SECRET</code>, <code>DEMO_MODE_ENABLED</code>) set on every relevant service</li>
       <li>Custom domain attached to frontend and API, DNS verified, SSL live</li>
       <li>One account tested end-to-end: seed → refresh → worker logs → frontend display</li>
+      <li>Demo mode tested: <code>/auth/demo</code> returns a token, checkouts load, and <code>/refresh</code> returns 403 for that token</li>
     </ul>
   </div>
 
