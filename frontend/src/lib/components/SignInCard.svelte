@@ -1,42 +1,67 @@
 <script>
 	import CatalogTabs from './CatalogTabs.svelte';
+	import EmailAuthForm from './EmailAuthForm.svelte';
 	import PaperCard from './PaperCard.svelte';
 
-	/** @type {{ onDemo: () => void, busy?: boolean, error?: string | null }} */
-	let { onDemo, busy = false, error = null } = $props();
+	/**
+	 * @type {{
+	 *   tab: 'signin' | 'create',
+	 *   onTab: (id: string) => void,
+	 *   onDemo: () => void,
+	 *   onLogin: (v: { email: string, password: string }) => void,
+	 *   onRegister: (v: { email: string, password: string, householdName: string }) => void,
+	 *   busy?: 'demo' | 'login' | 'register' | null,
+	 *   error?: string | null
+	 * }}
+	 */
+	let { tab, onTab, onDemo, onLogin, onRegister, busy = null, error = null } = $props();
+
+	// The email form stays tucked behind its link until asked for (Google is the lead path).
+	let emailOpen = $state(false);
 
 	const tabs = [
 		{ id: 'signin', label: 'Sign in' },
-		{ id: 'create', label: 'Create account', disabled: true }
+		{ id: 'create', label: 'Create account' }
 	];
 </script>
 
 <section class="signin">
-	<CatalogTabs {tabs} selected="signin" label="Account" />
+	<CatalogTabs {tabs} selected={tab} onselect={onTab} label="Account" />
 
 	<PaperCard>
 		<div class="body">
 			<header class="head">
-				<h1 class="title">Date Due</h1>
 				<span class="form-no">Form<br />2·A</span>
 			</header>
 
-			<!-- Google and email sign-in aren't wired up yet; see the note in the sign-in route. -->
-			<button class="google" disabled title="Not available yet">
-				<span class="g" aria-hidden="true">G</span>
-				<span>
-					<span class="google-title">Continue with Google</span>
-					<span class="google-sub">Fastest way in — nothing to remember</span>
-				</span>
-			</button>
+			{#if tab === 'signin'}
+				<!-- Google sign-in isn't wired up yet; the email form below is. -->
+				<button class="google" disabled title="Not available yet">
+					<span class="g" aria-hidden="true">G</span>
+					<span>
+						<span class="google-title">Continue with Google</span>
+						<span class="google-sub">Fastest way in — nothing to remember</span>
+					</span>
+				</button>
 
-			<div class="or"><span>Or by email</span></div>
+				<div class="or"><span>Or by email</span></div>
 
-			<button class="link" disabled title="Not available yet">Use an email and password</button>
+				{#if emailOpen}
+					<div class="email-form">
+						<EmailAuthForm mode="signin" onSubmit={onLogin} busy={busy === 'login'} focusFirst />
+					</div>
+				{:else}
+					<div class="use-email">
+						<button class="link" onclick={() => (emailOpen = true)}>Use an email and password</button>
+					</div>
+				{/if}
 
-			<button class="link demo" onclick={onDemo} disabled={busy}>
-				{busy ? 'Opening the demo…' : 'Try the demo →'}
-			</button>
+				<button class="link demo" onclick={onDemo} disabled={busy !== null}>
+					{busy === 'demo' ? 'Opening the demo…' : 'Try the demo →'}
+				</button>
+			{:else}
+				<EmailAuthForm mode="create" onSubmit={onRegister} busy={busy === 'register'} />
+			{/if}
 
 			{#if error}
 				<p class="error" role="alert">{error}</p>
@@ -58,7 +83,7 @@
 
 	.head {
 		display: flex;
-		justify-content: space-between;
+		justify-content: flex-end;
 		align-items: flex-start;
 		margin-bottom: var(--dd-space-7);
 		font-family: var(--dd-font-display);
@@ -149,6 +174,16 @@
 		border-top: 1px solid var(--dd-rule-input);
 	}
 
+	.use-email {
+		display: flex;
+		justify-content: center;
+	}
+
+	/* the revealed form sits where the link was, with the demo link still below it */
+	.email-form {
+		margin-bottom: var(--dd-space-6);
+	}
+
 	/* ---------- text links ---------- */
 	.link {
 		display: block;
@@ -164,8 +199,15 @@
 		cursor: pointer;
 	}
 
+	/* the lead path is the email form; the demo is a quieter aside, pushed to the right and faded */
 	.link.demo {
-		margin-bottom: 0;
+		margin: 0 0 0 auto;
+		opacity: 0.6;
+	}
+
+	.link.demo:hover:not(:disabled),
+	.link.demo:focus-visible {
+		opacity: 1;
 	}
 
 	:is(.google, .link):disabled {
@@ -173,10 +215,10 @@
 		opacity: 0.5;
 	}
 
-	/* the working control stays at full strength even while "busy" */
+	/* the demo link keeps its resting fade while busy (rather than dimming further) and shows progress */
 	.link.demo:disabled {
 		cursor: progress;
-		opacity: 0.7;
+		opacity: 0.6;
 	}
 
 	.error {

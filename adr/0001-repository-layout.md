@@ -61,6 +61,7 @@ library_checkouts/
 │       │   └── errors.js       # HttpError + the shared error handler
 │       └── routes/
 │           ├── auth.js         # POST /auth/register, /auth/login, /auth/google, /auth/demo
+│           ├── me.js           # GET /me
 │           ├── households.js
 │           └── accounts.js
 │

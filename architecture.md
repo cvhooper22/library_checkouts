@@ -189,6 +189,7 @@ Small Express/Fastify service. Token-based auth from day one (not cookie/session
 |---|---|---|
 | `POST` | `/auth/login` | Returns a token |
 | `POST` | `/auth/demo` | No credentials required — returns a token scoped to the shared demo household, for the "Try it out" flow. Gated by `DEMO_MODE_ENABLED`, rate-limited independently of `/auth/login`. See adr/0002-demo-mode.md |
+| `GET` | `/me` | The token's user and the households they belong to (with role) — how a client builds its session after `/auth/login` or `/auth/google`, which return only a token |
 | `GET` | `/households/:id/checkouts` | Current (non-returned) checkouts across all accounts in a household |
 | `GET` | `/accounts/:id/runs` | Run history for one account (debugging/status) |
 | `POST` | `/accounts/:id/refresh` | Enqueues an on-demand scrape job for one account |
