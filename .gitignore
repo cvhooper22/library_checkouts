@@ -145,3 +145,13 @@ dist
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 .vite/
+
+# macOS
+.DS_Store
+
+# Claude Code local config
+.claude/
+
+# Local design handoff and notes
+design-handoff/handoff/
+known_issues/

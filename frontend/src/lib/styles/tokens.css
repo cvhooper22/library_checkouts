@@ -34,12 +34,16 @@
   --dd-ink-on-dark: #f6f1e7;
   --dd-ink-on-alert: #fffdf8;
 
-  /* ── accents (the only three) ────────────────────────── */
+  /* ── accents (the only three hues; danger reuses the alert red) ── */
   --dd-stamp: #2f2a63;              /* violet stamp pad = every action */
   --dd-stamp-overdue: #8e241a;      /* overdue stamp, also error text */
   --dd-alert: #b3261e;              /* overdue text, alert chip */
   --dd-stamp-wash: rgba(47, 42, 99, 0.08);  /* action hover fill */
   --dd-stamp-hairline: rgba(47, 42, 99, 0.45);
+
+  /* destructive actions (Remove card): an action like any other, but in red instead of violet */
+  --dd-danger: var(--dd-alert);              /* border, label, focus ring */
+  --dd-danger-wash: rgba(179, 38, 30, 0.1);  /* hover fill */
 
   /* KPI digit ramp — descending urgency */
   --dd-kpi-overdue: var(--dd-alert);
@@ -112,6 +116,7 @@
   --dd-radius-button: 2px;
   --dd-radius-pill: 999px;
   --dd-border-action: 1.5px solid var(--dd-stamp);
+  --dd-border-danger: 1.5px solid var(--dd-danger);
   --dd-shadow-card: 0 3px 0 rgba(38, 34, 28, 0.06), 0 14px 26px rgba(38, 34, 28, 0.18);
   --dd-shadow-raised: 0 2px 0 rgba(38, 34, 28, 0.08);
   --dd-shadow-tab-active: 0 -1px 0 rgba(38, 34, 28, 0.35);

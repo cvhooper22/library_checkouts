@@ -179,9 +179,11 @@
 		justify-content: center;
 	}
 
-	/* the revealed form sits where the link was, with the demo link still below it */
+	/* the revealed form sits where the link was, with the demo link still below it;
+	   inset from the divider above so the inputs read as their own block */
 	.email-form {
 		margin-bottom: var(--dd-space-6);
+		padding-inline: 2rem;
 	}
 
 	/* ---------- text links ---------- */

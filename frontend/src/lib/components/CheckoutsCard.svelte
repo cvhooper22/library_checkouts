@@ -13,10 +13,12 @@
 	 *   selected?: string,
 	 *   householdName?: string,
 	 *   holder?: string,
+	 *   holderFor?: (account: import('$lib/checkouts.js').AccountTab) => string,
 	 *   updatedAt?: Date | null,
 	 *   refreshing?: boolean,
 	 *   onRefresh?: () => void,
 	 *   onSignOut?: () => void,
+	 *   onManageCards?: () => void,
 	 *   now?: Date
 	 * }}
 	 */
@@ -26,10 +28,12 @@
 		selected = $bindable(ALL),
 		householdName = 'Household, The',
 		holder,
+		holderFor,
 		updatedAt = null,
 		refreshing = false,
 		onRefresh,
 		onSignOut,
+		onManageCards,
 		now = new Date()
 	} = $props();
 
@@ -53,25 +57,37 @@
 		}))
 	);
 
-	const selectedName = $derived(accounts.find((a) => a.id === selected)?.name);
+	const selectedAccount = $derived(accounts.find((a) => a.id === selected));
+	const selectedName = $derived(selectedAccount?.name);
+	// The card belongs to whoever's tab is open; the household's holder line is for "All".
+	const shownHolder = $derived(selectedAccount && holderFor ? holderFor(selectedAccount) : holder);
+	// "Cards" isn't a filter: it leaves for the register, so `selected` never becomes it.
+	const CARDS = 'cards';
 	const tabs = $derived([
 		{ id: ALL, label: 'All' },
-		...accounts.map((a) => ({ id: a.id, label: a.name }))
+		...accounts.map((a) => ({ id: a.id, label: a.name })),
+		...(onManageCards ? [{ id: CARDS, label: 'Cards', end: true }] : [])
 	]);
+
+	/** @param {string} id */
+	function selectTab(id) {
+		if (id === CARDS) onManageCards?.();
+		else selected = id;
+	}
 </script>
 
 <section class="checkouts">
-	<CatalogTabs {tabs} {selected} onselect={(id) => (selected = id)} label="Library accounts" />
+	<CatalogTabs {tabs} {selected} onselect={selectTab} label="Library accounts" />
 
 	<PaperCard>
 		<header class="head">
 			<div class="head-top">
 				<span class="num">№{pad2(rows.length)}</span>
-				{#if holder}
+				{#if shownHolder}
 					<div class="holder">
 						<div class="holder-label">Card holder</div>
-						<div class="holder-name">{holder}</div>
-						<button class="return" onclick={onSignOut}>Return card →</button>
+						<div class="holder-name">{shownHolder}</div>
+						<button class="return" onclick={onSignOut}>Sign Out →</button>
 					</div>
 				{/if}
 			</div>

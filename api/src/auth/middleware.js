@@ -42,10 +42,11 @@ async function requireHouseholdMember(req, res, next) {
 }
 
 // Loads the account in req.params.id, confirms req.userId belongs to its
-// household, and stashes it on req.account so routes don't re-fetch it.
+// household, and stashes it on req.account so routes don't re-fetch it. A
+// soft-deleted account is treated as missing.
 async function requireAccountAccess(req, res, next) {
   const account = await prisma.account.findUnique({ where: { id: req.params.id } });
-  if (!account) {
+  if (!account || account.deletedAt) {
     throw new HttpError(404, 'Account not found');
   }
   const membership = await prisma.householdMember.findUnique({

@@ -437,6 +437,7 @@ DATABASE_URL="&lt;external-url&gt;" npx knex migrate:latest</code></pre>
         <tr><td><code>CREDENTIAL_ENCRYPTION_KEY</code></td><td>API, Worker, both Cron Jobs</td><td>Generated locally — see below. Must be the <em>same</em> value everywhere: the API encrypts credentials on write, the worker decrypts them at scrape time, and the demo reseed job encrypts a placeholder blob for its own accounts.</td></tr>
         <tr><td><code>JWT_SECRET</code></td><td>API</td><td>Generated locally the same way — signs and verifies auth tokens, including demo tokens</td></tr>
         <tr><td><code>DEMO_MODE_ENABLED</code></td><td>API</td><td><code>true</code> — kill switch for <code>POST /auth/demo</code>, flip to <code>false</code> to disable without a deploy</td></tr>
+        <tr><td><code>TRUST_PROXY</code></td><td>API</td><td><code>1</code> — Render puts one proxy in front of the service. Without it the rate limiters on <code>/auth/demo</code> and <code>/auth/register</code> see the proxy's IP for every request and become one shared limit for all visitors.</td></tr>
         <tr><td><code>NODE_ENV</code></td><td>All</td><td><code>production</code></td></tr>
       </table>
     </div>

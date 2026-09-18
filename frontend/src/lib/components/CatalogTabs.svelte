@@ -1,7 +1,7 @@
 <script>
 	/**
 	 * @type {{
-	 *   tabs: { id: string, label: string, disabled?: boolean }[],
+	 *   tabs: { id: string, label: string, disabled?: boolean, end?: boolean }[],
 	 *   selected: string,
 	 *   onselect?: (id: string) => void,
 	 *   label?: string
@@ -15,6 +15,7 @@
 		<button
 			role="tab"
 			class="tab"
+			class:end={tab.end}
 			aria-selected={selected === tab.id}
 			disabled={tab.disabled}
 			onclick={() => onselect?.(tab.id)}
@@ -29,7 +30,12 @@
 	.tabs {
 		display: flex;
 		gap: var(--dd-space-1);
-		padding-left: var(--dd-tab-offset);
+		padding-inline: var(--dd-tab-offset);
+	}
+
+	/* a tab flagged `end` (and any after it) sits at the far right of the strip */
+	.tab.end {
+		margin-left: auto;
 	}
 
 	.tab {

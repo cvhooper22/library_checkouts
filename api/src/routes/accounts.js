@@ -5,6 +5,17 @@ const { enqueueRefresh } = require('../queue');
 
 const router = express.Router();
 
+// Soft delete: the row and its history stay, but every reader filters on `deletedAt`
+// (see requireAccountAccess, the household routes and worker/src/enqueueDaily.js).
+// Repeat calls 404 via requireAccountAccess, so `deletedAt` is only ever set once.
+router.delete('/:id', requireAccountAccess, async (req, res) => {
+  await prisma.account.update({
+    where: { id: req.account.id },
+    data: { deletedAt: new Date() },
+  });
+  res.status(204).end();
+});
+
 router.get('/:id/runs', requireAccountAccess, async (req, res) => {
   const runs = await prisma.run.findMany({
     where: { accountId: req.params.id },
