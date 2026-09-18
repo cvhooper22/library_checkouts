@@ -4,11 +4,22 @@ const authRoutes = require('./routes/auth');
 const householdRoutes = require('./routes/households');
 const libraryRoutes = require('./routes/libraries');
 const accountRoutes = require('./routes/accounts');
+const meRoutes = require('./routes/me');
 const { authenticate, demoReadOnly } = require('./auth/middleware');
 const { errorHandler } = require('./lib/errors');
 
 function createApp() {
   const app = express();
+
+  // Behind a reverse proxy (Render), req.ip is the proxy unless Express is told
+  // how many hops to trust — which would make every IP-keyed rate limit
+  // (/auth/demo, /auth/register) one shared bucket for all clients. Left unset
+  // for local dev, where trusting X-Forwarded-For would let a client spoof its IP.
+  // A hop count ("1") or anything Express's `trust proxy` setting accepts.
+  if (process.env.TRUST_PROXY) {
+    const value = process.env.TRUST_PROXY;
+    app.set('trust proxy', /^\d+$/.test(value) ? Number(value) : value);
+  }
 
   app.use(cors({ origin: process.env.CORS_ORIGIN || '*' }));
   app.use(express.json());
@@ -23,6 +34,7 @@ function createApp() {
   // authenticate themselves.
   app.use(authenticate, demoReadOnly);
 
+  app.use('/me', meRoutes);
   app.use('/libraries', libraryRoutes);
   app.use('/households', householdRoutes);
   app.use('/accounts', accountRoutes);

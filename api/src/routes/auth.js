@@ -11,11 +11,20 @@ const googleClient = new OAuth2Client();
 
 const BCRYPT_ROUNDS = 12;
 
+// Anonymous account creation, and each attempt costs a bcrypt hash (~250ms of CPU
+// at 12 rounds), so it's both an abuse target and a cheap way to burn server time.
+const registerLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  limit: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 // Not in architecture.md's endpoint table, but /auth/login has nothing to check
 // a password against until some path creates a user — this is that path. Creates
 // the user and a household they own (architecture.md's household onboarding flow
 // for non-owner contributors is still an open item, see §9).
-router.post('/register', async (req, res) => {
+router.post('/register', registerLimiter, async (req, res) => {
   const { email, password, householdName } = req.body || {};
   if (!email || !password || !householdName) {
     throw new HttpError(400, 'email, password, and householdName are required');
@@ -60,6 +69,24 @@ router.post('/login', async (req, res) => {
   res.json({ token: signToken(user.id) });
 });
 
+// First-time Google sign-in is also sign-up, so — like /register — the new user
+// gets a household they own; without one they'd have nowhere to add accounts.
+// There's no form to ask for a name, so derive one from the Google profile.
+function createGoogleUser({ sub, email, given_name: givenName }) {
+  const name = `${givenName || email.split('@')[0]}'s Household`;
+  return prisma.$transaction(async (tx) => {
+    const user = await tx.user.create({ data: { email, googleId: sub } });
+    await tx.household.create({
+      data: {
+        name,
+        ownerUserId: user.id,
+        members: { create: { userId: user.id, role: 'owner' } },
+      },
+    });
+    return user;
+  });
+}
+
 router.post('/google', async (req, res) => {
   const { idToken } = req.body || {};
   if (!idToken) {
@@ -92,11 +119,10 @@ router.post('/google', async (req, res) => {
   // already verified the caller owns that address.
   let user = await prisma.user.findUnique({ where: { googleId: payload.sub } });
   if (!user) {
-    user = await prisma.user.upsert({
-      where: { email: payload.email },
-      update: { googleId: payload.sub },
-      create: { email: payload.email, googleId: payload.sub },
-    });
+    const byEmail = await prisma.user.findUnique({ where: { email: payload.email } });
+    user = byEmail
+      ? await prisma.user.update({ where: { id: byEmail.id }, data: { googleId: payload.sub } })
+      : await createGoogleUser(payload);
   }
 
   res.json({ token: signToken(user.id) });

@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;600&display=swap" rel="stylesheet"><style>
+body{margin:0;background:#EDE6D8;font-family:"Helvetica Neue",Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased}
+a{color:#8A6A2F}a:hover{color:#1C1A17}
+</style></helmet>
+
+<div style="max-width:1080px;margin:0 auto;padding:44px 28px 80px;display:flex;flex-direction:column;gap:38px">
+
+  <header style="display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:20px;padding-bottom:20px;border-bottom:1px solid rgba(58,80,104,.45)">
+    <div>
+      <div style="font-family:Oswald,'Arial Narrow',sans-serif;font-size:28px;font-weight:600;letter-spacing:.05em;color:#26221C">DATE DUE &mdash; DESIGN TOKENS</div>
+      <div style="margin-top:6px;font-size:8.5px;font-weight:700;letter-spacing:.2em;color:#5A7391">FOR SVELTE &middot; handoff/svelte/tokens.css &middot; handoff/svelte/tokens.js</div>
+    </div>
+    <div style="font-size:12px;line-height:1.5;color:#3A342B;max-width:360px;text-wrap:pretty">Every value below is a CSS custom property. Styling reads the vars; <span style="font-family:ui-monospace,Menlo,monospace;font-size:11px">tokens.js</span> only carries what JS must compute &mdash; stamp jitter, due state, KPI ink.</div>
+  </header>
+
+  <sc-for list="{{ groups }}" as="g" hint-placeholder-count="4">
+    <section style="display:flex;flex-direction:column;gap:14px">
+      <div style="display:flex;align-items:baseline;gap:12px;border-bottom:1px solid rgba(58,80,104,.32);padding-bottom:7px">
+        <span style="font-family:Oswald,'Arial Narrow',sans-serif;font-size:17px;font-weight:600;letter-spacing:.06em;color:#26221C">{{ g.title }}</span>
+        <span style="font-size:8.5px;font-weight:700;letter-spacing:.2em;color:#5A7391">{{ g.note }}</span>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:2px 18px">
+        <sc-for list="{{ g.swatches }}" as="s" hint-placeholder-count="8">
+          <div style="display:flex;align-items:center;gap:11px;padding:7px 0;border-bottom:1px solid rgba(58,80,104,.18)">
+            <span style="flex:none;width:34px;height:34px;border-radius:2px;border:1px solid rgba(38,34,28,.28);background:{{ s.chip }}"></span>
+            <span style="min-width:0;flex:1">
+              <span style="display:block;font-family:ui-monospace,Menlo,monospace;font-size:10.5px;color:#26221C;overflow-wrap:anywhere">{{ s.name }}</span>
+              <span style="display:block;margin-top:2px;font-size:10px;color:#6B5C3F;overflow-wrap:anywhere">{{ s.value }}</span>
+              <span style="display:block;margin-top:2px;font-size:9.5px;color:#5A7391;text-wrap:pretty">{{ s.use }}</span>
+            </span>
+          </div>
+        </sc-for>
+      </div>
+    </section>
+  </sc-for>
+
+  <section style="display:flex;flex-direction:column;gap:14px">
+    <div style="display:flex;align-items:baseline;gap:12px;border-bottom:1px solid rgba(58,80,104,.32);padding-bottom:7px">
+      <span style="font-family:Oswald,'Arial Narrow',sans-serif;font-size:17px;font-weight:600;letter-spacing:.06em;color:#26221C">TYPE</span>
+      <span style="font-size:8.5px;font-weight:700;letter-spacing:.2em;color:#5A7391">OSWALD 600 FOR STAMPS, NUMERALS, ACTIONS &middot; HELVETICA FOR EVERYTHING ELSE</span>
+    </div>
+    <sc-for list="{{ typeScale }}" as="t" hint-placeholder-count="12">
+      <div style="display:grid;grid-template-columns:minmax(0,1fr) 190px;gap:18px;align-items:baseline;padding:9px 0;border-bottom:1px solid rgba(58,80,104,.18)">
+        <div style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;{{ t.css }}">{{ t.sample }}</div>
+        <div>
+          <div style="font-family:ui-monospace,Menlo,monospace;font-size:10.5px;color:#26221C;overflow-wrap:anywhere">{{ t.name }}</div>
+          <div style="margin-top:2px;font-size:9.5px;color:#5A7391">{{ t.spec }}</div>
+        </div>
+      </div>
+    </sc-for>
+  </section>
+
+  <section style="display:flex;flex-direction:column;gap:14px">
+    <div style="display:flex;align-items:baseline;gap:12px;border-bottom:1px solid rgba(58,80,104,.32);padding-bottom:7px">
+      <span style="font-family:Oswald,'Arial Narrow',sans-serif;font-size:17px;font-weight:600;letter-spacing:.06em;color:#26221C">SPACE &amp; MEASURE</span>
+      <span style="font-size:8.5px;font-weight:700;letter-spacing:.2em;color:#5A7391">3 &middot; 5 &middot; 8 &middot; 12 &middot; 16 &middot; 20 &middot; 22</span>
+    </div>
+    <div style="display:flex;flex-wrap:wrap;gap:22px">
+      <sc-for list="{{ spaces }}" as="s" hint-placeholder-count="10">
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <div style="height:26px;border-radius:2px;background:rgba(47,42,99,.22);border:1px solid rgba(47,42,99,.35);width:{{ s.w }}"></div>
+          <div style="font-family:ui-monospace,Menlo,monospace;font-size:10px;color:#26221C">{{ s.name }}</div>
+          <div style="font-size:9.5px;color:#5A7391">{{ s.value }}</div>
+        </div>
+      </sc-for>
+    </div>
+  </section>
+
+  <section style="display:flex;flex-direction:column;gap:16px">
+    <div style="display:flex;align-items:baseline;gap:12px;border-bottom:1px solid rgba(58,80,104,.32);padding-bottom:7px">
+      <span style="font-family:Oswald,'Arial Narrow',sans-serif;font-size:17px;font-weight:600;letter-spacing:.06em;color:#26221C">PARTS</span>
+      <span style="font-size:8.5px;font-weight:700;letter-spacing:.2em;color:#5A7391">THE RECIPES THE TOKENS ADD UP TO</span>
+    </div>
+    <div style="display:flex;flex-wrap:wrap;gap:26px;align-items:flex-start">
+
+      <div style="flex:1 1 300px;min-width:280px;display:flex;flex-direction:column;gap:9px">
+        <div style="font-size:8.5px;font-weight:700;letter-spacing:.2em;color:#5A7391">CARD STOCK + PATINA + TABS</div>
+        <div>
+          <div style="display:flex;gap:3px;padding-left:14px">
+            <div style="border:1px solid rgba(38,34,28,.28);border-bottom:none;border-radius:5px 5px 0 0;padding:7px 10px 8px;font-size:9.5px;font-weight:700;letter-spacing:.12em;background:#EFE3C6;color:#26221C;box-shadow:0 -1px 0 rgba(38,34,28,.35)">ACTIVE</div>
+            <div style="border:1px solid rgba(38,34,28,.28);border-bottom:none;border-radius:5px 5px 0 0;padding:7px 10px 8px;font-size:9.5px;font-weight:700;letter-spacing:.12em;background:#E2D4B4;color:#7A6E56;box-shadow:inset 0 -3px 5px rgba(38,34,28,.09)">REST</div>
+          </div>
+          <div style="position:relative;background:#EFE3C6;border:1px solid rgba(38,34,28,.32);border-radius:3px;box-shadow:0 3px 0 rgba(38,34,28,.06),0 14px 26px rgba(38,34,28,.18);overflow:hidden">
+            <div style="position:absolute;inset:0;pointer-events:none;background:radial-gradient(120% 90% at 12% 0%,rgba(255,251,236,.85),transparent 60%),radial-gradient(90% 70% at 100% 100%,rgba(150,124,74,.22),transparent 55%)"></div>
+            <div style="position:relative;padding:16px 20px 14px">
+              <div style="border-bottom:1px solid rgba(58,80,104,.45);padding-bottom:3px;font-size:19px;font-weight:600;letter-spacing:-.2px;color:#26221C">Ruled field</div>
+              <div style="margin-top:3px;font-size:8.5px;font-weight:700;letter-spacing:.2em;color:#5A7391">LABEL SITS UNDER THE FIELD</div>
+              <div style="margin-top:16px;display:grid;grid-template-columns:104px 1fr;border-top:1px solid rgba(58,80,104,.5);border-bottom:1px solid rgba(58,80,104,.32);min-height:44px">
+                <div style="display:flex;align-items:center;font-family:Oswald,'Arial Narrow',sans-serif;font-size:19px;font-weight:600;letter-spacing:.06em;color:#2F2A63;opacity:.8;transform:rotate(-.9deg)">SEP 2</div>
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 0 8px 12px;border-left:1px solid rgba(58,80,104,.5)">
+                  <div style="min-width:0">
+                    <div style="font-size:14.5px;font-weight:600;letter-spacing:-.2px;color:#26221C">The Wild Robot</div>
+                    <div style="margin-top:3px;font-size:10px;font-weight:700;letter-spacing:.16em;color:#6B5C3F">OWEN</div>
+                  </div>
+                  <div style="flex:none;font-size:10.5px;font-weight:700;letter-spacing:.05em;color:#1C1A17">in 5d</div>
+                </div>
+              </div>
+              <div style="display:grid;grid-template-columns:104px 1fr;border-bottom:1px solid rgba(58,80,104,.32);min-height:44px">
+                <div style="display:flex;align-items:center;font-family:Oswald,'Arial Narrow',sans-serif;font-size:19px;font-weight:600;letter-spacing:.06em;color:#8E241A;opacity:.71;transform:rotate(1.8deg)">AUG 26</div>
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 0 8px 12px;border-left:1px solid rgba(58,80,104,.5)">
+                  <div style="min-width:0">
+                    <div style="font-size:14.5px;font-weight:600;letter-spacing:-.2px;color:#26221C">The Hobbit</div>
+                    <div style="margin-top:3px;font-size:10px;font-weight:700;letter-spacing:.16em;color:#6B5C3F">MIRA</div>
+                  </div>
+                  <div style="flex:none;font-size:10.5px;font-weight:700;letter-spacing:.05em;color:#B3261E">2d late</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style="flex:1 1 280px;min-width:260px;display:flex;flex-direction:column;gap:18px">
+        <div style="display:flex;flex-direction:column;gap:9px">
+          <div style="font-size:8.5px;font-weight:700;letter-spacing:.2em;color:#5A7391">ACTIONS &mdash; STAMP VIOLET ONLY</div>
+          <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:center">
+            <button style="padding:8px 13px;border:1.5px solid #2F2A63;border-radius:2px;background:transparent;color:#2F2A63;font-family:Oswald,'Arial Narrow',sans-serif;font-size:11.5px;font-weight:600;letter-spacing:.18em;cursor:pointer;opacity:.82;transform:rotate(-1.2deg)" style-hover="opacity:1;background:rgba(47,42,99,.08)">RE-STAMP</button>
+            <button style="padding:11px 18px;border:1px solid rgba(58,80,104,.55);border-radius:2px;background:transparent;color:#2F2A63;font-family:Oswald,'Arial Narrow',sans-serif;font-size:12.5px;font-weight:600;letter-spacing:.2em;cursor:pointer" style-hover="background:rgba(47,42,99,.07)">SIGN IN</button>
+            <button style="padding:0 0 1px;border:none;border-bottom:1px solid rgba(47,42,99,.45);background:transparent;font-size:9px;font-weight:700;letter-spacing:.16em;color:#2F2A63;cursor:pointer" style-hover="color:#26221C;border-bottom-color:#26221C">QUIET LINK ACTION</button>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:9px">
+          <div style="font-size:8.5px;font-weight:700;letter-spacing:.2em;color:#5A7391">INPUT &mdash; RULED, NEVER BOXED</div>
+          <div style="background:#EFE3C6;border:1px solid rgba(38,34,28,.32);border-radius:3px;padding:16px 20px 18px">
+            <input value="{{ sample }}" onChange="{{ onSample }}" placeholder="you@household.co" style="width:100%;box-sizing:border-box;background:transparent;border:none;border-bottom:1px solid rgba(58,80,104,.55);padding:0 2px 7px;font-size:17px;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;color:#26221C;outline:none" style-focus="border-bottom-color:#2F2A63">
+            <div style="margin-top:4px;font-size:8.5px;font-weight:700;letter-spacing:.2em;color:#5A7391">EMAIL</div>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:9px">
+          <div style="font-size:8.5px;font-weight:700;letter-spacing:.2em;color:#5A7391">KPI RAMP &mdash; DESCENDING URGENCY</div>
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;padding:10px 12px 9px;border:1px solid rgba(58,80,104,.4);background:rgba(58,80,104,.05)">
+            <sc-for list="{{ kpis }}" as="k" hint-placeholder-count="4">
+              <div style="border-bottom:{{ k.rule }};padding-bottom:5px">
+                <div style="font-family:Oswald,'Arial Narrow',sans-serif;font-size:27px;font-weight:600;line-height:1;font-variant-numeric:tabular-nums;color:{{ k.color }}">{{ k.n }}</div>
+                <div style="margin-top:5px;font-size:8px;font-weight:700;letter-spacing:.14em;color:#5A7391">{{ k.label }}</div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section style="display:flex;flex-direction:column;gap:14px">
+    <div style="display:flex;align-items:baseline;gap:12px;border-bottom:1px solid rgba(58,80,104,.32);padding-bottom:7px">
+      <span style="font-family:Oswald,'Arial Narrow',sans-serif;font-size:17px;font-weight:600;letter-spacing:.06em;color:#26221C">RULES OF THE LOOK</span>
+      <span style="font-size:8.5px;font-weight:700;letter-spacing:.2em;color:#5A7391">WHAT THE TOKENS CAN&rsquo;T ENFORCE</span>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px">
+      <sc-for list="{{ rules }}" as="r" hint-placeholder-count="6">
+        <div style="padding:13px 15px;background:#FFFDF8;border:1px solid rgba(28,26,23,.12);border-radius:3px">
+          <div style="font-size:8.5px;font-weight:700;letter-spacing:.18em;color:#5A7391">{{ r.head }}</div>
+          <div style="margin-top:6px;font-size:12px;line-height:1.5;color:#3A342B;text-wrap:pretty">{{ r.body }}</div>
+        </div>
+      </sc-for>
+    </div>
+  </section>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{}">
+const SW = (name, value, use, chip) => ({ name, value, use, chip: chip || value });
+
+class Component extends DCLogic {
+  state = { sample: "" };
+
+  renderVals() {
+    return {
+      sample: this.state.sample,
+      onSample: e => this.setState({ sample: e.target.value }),
+
+      groups: [
+        {
+          title: "PAPER",
+          note: "CARD STOCK VS. APP SURFACES VS. DESK",
+          swatches: [
+            SW("--dd-paper", "#EFE3C6", "Card stock"),
+            SW("--dd-paper-tab", "#E2D4B4", "Inactive catalog tab"),
+            SW("--dd-paper-raised", "#FFFBF0", "Inset control on stock"),
+            SW("--dd-page", "#EDE6D8", "Desk ground behind cards"),
+            SW("--dd-surface", "#FFFDF8", "Plain app card"),
+            SW("--dd-surface-sunk", "#F6F1E7", "Header band, quiet fill"),
+            SW("--dd-panel", "rgba(58,80,104,.05)", "KPI block ground", "#EFE3C6"),
+            SW("--dd-patina", "bloom + age radials", "Inset layer, every card", "radial-gradient(120% 90% at 12% 0%,rgba(255,251,236,.85),transparent 60%),radial-gradient(90% 70% at 100% 100%,rgba(150,124,74,.22),transparent 55%),#EFE3C6")
+          ]
+        },
+        {
+          title: "INK",
+          note: "TWO PRIMARIES \u2014 ONE FOR STOCK, ONE FOR APP SURFACES",
+          swatches: [
+            SW("--dd-ink", "#26221C", "Primary on card stock"),
+            SW("--dd-ink-app", "#1C1A17", "Primary on app surfaces"),
+            SW("--dd-ink-soft", "#3A342B", "Secondary"),
+            SW("--dd-ink-call", "#4A3F2C", "Call-number block"),
+            SW("--dd-ink-label", "#5A7391", "Every printed all-caps label"),
+            SW("--dd-ink-borrower", "#6B5C3F", "Borrower name"),
+            SW("--dd-ink-muted", "#6E675C", "Meta on app surfaces"),
+            SW("--dd-ink-tab", "#7A6E56", "Inactive tab label"),
+            SW("--dd-ink-link", "#8A6A2F", "Anchors, brass"),
+            SW("--dd-ink-on-dark", "#F6F1E7", "Text on ink fills")
+          ]
+        },
+        {
+          title: "ACCENTS",
+          note: "THREE, AND NO MORE",
+          swatches: [
+            SW("--dd-stamp", "#2F2A63", "Every action \u2014 borders, labels, focus"),
+            SW("--dd-stamp-overdue", "#8E241A", "Overdue stamp, error text"),
+            SW("--dd-alert", "#B3261E", "Overdue relative-due text"),
+            SW("--dd-kpi-week", "#A2701A", "This-week count > 0"),
+            SW("--dd-kpi-later", "#A9B4BF", "Later count \u2014 deliberately quiet"),
+            SW("--dd-kpi-zero", "#B9A99A", "Any count of 00")
+          ]
+        },
+        {
+          title: "LINES",
+          note: "ALPHA-BASED, SO THEY SIT ON ANY PAPER",
+          swatches: [
+            SW("--dd-rule-strong", "rgba(58,80,104,.5)", "Ledger rules, column divider", "linear-gradient(#EFE3C6,#EFE3C6) padding-box, rgba(58,80,104,.5)"),
+            SW("--dd-rule", "rgba(58,80,104,.45)", "Field underlines", "#EFE3C6"),
+            SW("--dd-rule-input", "rgba(58,80,104,.55)", "Input underline, resting", "#EFE3C6"),
+            SW("--dd-rule-soft", "rgba(58,80,104,.32)", "Row separators", "#EFE3C6"),
+            SW("--dd-rule-alert", "rgba(179,38,30,.55)", "KPI underline, overdue", "#EFE3C6"),
+            SW("--dd-edge", "rgba(38,34,28,.32)", "Card die-cut edge", "#EFE3C6")
+          ]
+        }
+      ],
+
+      typeScale: [
+        { name: "--dd-text-kpi", spec: "27px / display 600 / tabular", sample: "07", css: "font-family:Oswald,'Arial Narrow',sans-serif;font-size:27px;font-weight:600;line-height:1;font-variant-numeric:tabular-nums;color:#26221C" },
+        { name: "--dd-text-title", spec: "19px / 600 / -0.2px", sample: "Household, The", css: "font-size:19px;font-weight:600;letter-spacing:-.2px;color:#26221C" },
+        { name: "--dd-text-stamp", spec: "19px / display 600 / 0.06em", sample: "SEP 14", css: "font-family:Oswald,'Arial Narrow',sans-serif;font-size:19px;font-weight:600;letter-spacing:.06em;color:#2F2A63" },
+        { name: "--dd-text-cardno", spec: "17px / display 600 / 0.05em", sample: "\u211609", css: "font-family:Oswald,'Arial Narrow',sans-serif;font-size:17px;font-weight:600;letter-spacing:.05em;color:#26221C" },
+        { name: "--dd-text-input", spec: "17px / text", sample: "you@household.co", css: "font-size:17px;color:#26221C" },
+        { name: "--dd-text-subject", spec: "15px / -0.1px", sample: "All checkouts, soonest due first", css: "font-size:15px;letter-spacing:-.1px;color:#3A342B" },
+        { name: "--dd-text-row", spec: "14.5px / 600 / -0.2px", sample: "Everything Sad Is Untrue", css: "font-size:14.5px;font-weight:600;letter-spacing:-.2px;color:#26221C" },
+        { name: "--dd-text-action", spec: "12.5px / display 600 / 0.2em", sample: "SIGN IN", css: "font-family:Oswald,'Arial Narrow',sans-serif;font-size:12.5px;font-weight:600;letter-spacing:.2em;color:#2F2A63" },
+        { name: "--dd-text-meta", spec: "10.5px / 700 / 0.05em / tabular", sample: "in 3d", css: "font-size:10.5px;font-weight:700;letter-spacing:.05em;color:#1C1A17" },
+        { name: "--dd-text-caption", spec: "10px / 700 / 0.16em", sample: "MIRA", css: "font-size:10px;font-weight:700;letter-spacing:.16em;color:#6B5C3F" },
+        { name: "--dd-text-tab", spec: "9.5px / 700 / 0.12em", sample: "CREATE ACCOUNT", css: "font-size:9.5px;font-weight:700;letter-spacing:.12em;color:#7A6E56" },
+        { name: "--dd-text-label", spec: "8.5px / 700 / 0.18\u20130.2em", sample: "TITLE & BORROWER", css: "font-size:8.5px;font-weight:700;letter-spacing:.2em;color:#5A7391" },
+        { name: "--dd-text-label-sm", spec: "8px / 700 / 0.14em", sample: "TOTAL OUT", css: "font-size:8px;font-weight:700;letter-spacing:.14em;color:#5A7391" }
+      ],
+
+      spaces: [
+        { name: "--dd-space-1", value: "3px", w: "3px" },
+        { name: "--dd-space-2", value: "5px", w: "5px" },
+        { name: "--dd-space-3", value: "8px", w: "8px" },
+        { name: "--dd-space-4", value: "12px", w: "12px" },
+        { name: "--dd-space-5", value: "16px", w: "16px" },
+        { name: "--dd-space-6", value: "20px \u2014 gutter", w: "20px" },
+        { name: "--dd-space-7", value: "22px", w: "22px" },
+        { name: "--dd-row-min-h", value: "44px \u2014 touch target", w: "44px" },
+        { name: "--dd-date-col", value: "104px", w: "104px" },
+        { name: "--dd-card-width", value: "430px", w: "215px" }
+      ],
+
+      kpis: [
+        { n: "02", label: "OVERDUE", color: "#B3261E", rule: "1.5px solid rgba(179,38,30,.55)" },
+        { n: "04", label: "THIS WEEK", color: "#A2701A", rule: "1.5px solid rgba(58,80,104,.35)" },
+        { n: "03", label: "LATER", color: "#A9B4BF", rule: "1.5px solid rgba(58,80,104,.35)" },
+        { n: "09", label: "TOTAL OUT", color: "#26221C", rule: "1.5px solid rgba(58,80,104,.35)" }
+      ],
+
+      rules: [
+        { head: "EVERY CARD IS STOCK + PATINA", body: "Paper fill, 1px die-cut edge, 3px radius, the card shadow, overflow hidden \u2014 plus an inset pointer-events:none layer carrying --dd-patina." },
+        { head: "LABELS ARE PRINTED, NOT STYLED", body: "All-caps, 700, label blue, wide tracking, and sitting under the field they name \u2014 never above it." },
+        { head: "FIELDS ARE RULED, NOT BOXED", body: "Transparent input, no border but the bottom rule; focus swaps that rule to stamp violet. Never a filled input." },
+        { head: "ACTIONS ARE STAMP VIOLET", body: "Outline, 2px radius, display font, wide tracking. The primary one may sit at 0.82 opacity with a -1.2\u00b0 tilt, going full on hover." },
+        { head: "OVERDUE IS THE ONLY RED", body: "Applied at row level: stamp ink and relative-due text. Nothing else in the product ever turns red." },
+        { head: "STAMP VARIANCE IS DETERMINISTIC", body: "Rotation and wear hash from the title via stampVars(). Drop it and every stamp prints identically \u2014 nothing breaks." }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>
