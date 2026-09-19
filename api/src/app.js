@@ -5,6 +5,7 @@ const householdRoutes = require('./routes/households');
 const libraryRoutes = require('./routes/libraries');
 const accountRoutes = require('./routes/accounts');
 const meRoutes = require('./routes/me');
+const featureRoutes = require('./routes/features');
 const { authenticate, demoReadOnly } = require('./auth/middleware');
 const { errorHandler } = require('./lib/errors');
 
@@ -35,6 +36,7 @@ function createApp() {
   app.use(authenticate, demoReadOnly);
 
   app.use('/me', meRoutes);
+  app.use('/features', featureRoutes);
   app.use('/libraries', libraryRoutes);
   app.use('/households', householdRoutes);
   app.use('/accounts', accountRoutes);

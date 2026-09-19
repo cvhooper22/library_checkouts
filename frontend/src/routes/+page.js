@@ -8,10 +8,12 @@ export async function load() {
 	if (!session) redirect(307, '/signin');
 
 	try {
-		const { checkouts } = await api(`/households/${session.householdId}/checkouts`, {
-			token: session.token
-		});
-		return { ...fromApi(checkouts), session };
+		const [{ checkouts }, { features }] = await Promise.all([
+			api(`/households/${session.householdId}/checkouts`, { token: session.token }),
+			// Fails closed: if the flags can't be read (e.g. an older API), optional features stay off.
+			api('/features', { token: session.token }).catch(() => ({ features: {} }))
+		]);
+		return { ...fromApi(checkouts), session, features };
 	} catch (e) {
 		if (!(e instanceof ApiError)) throw e;
 		// Expired or invalid token (demo tokens last an hour): back to sign-in.

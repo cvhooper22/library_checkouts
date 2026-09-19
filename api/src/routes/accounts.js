@@ -2,6 +2,7 @@ const express = require('express');
 const prisma = require('@library-tracker/db');
 const { requireAccountAccess } = require('../auth/middleware');
 const { enqueueRefresh } = require('../queue');
+const { requireFeature } = require('../features');
 
 const router = express.Router();
 
@@ -40,8 +41,9 @@ router.get('/:id/status', requireAccountAccess, async (req, res) => {
 
 // Enqueues an on-demand scrape and creates its `runs` row up front so the
 // response can carry a real run_id immediately, per architecture.md §6. The
-// worker (worker/src/index.js) fills in scraperVersion once it picks the job up.
-router.post('/:id/refresh', requireAccountAccess, async (req, res) => {
+// worker (worker/src/runScrape.js) fills in scraperVersion once it picks the job up.
+// Behind the `refresh` flag, checked first so a disabled call never creates a run row.
+router.post('/:id/refresh', requireFeature('refresh'), requireAccountAccess, async (req, res) => {
   const run = await prisma.run.create({
     data: { accountId: req.account.id, status: 'running', scraperVersion: 'pending' },
   });
