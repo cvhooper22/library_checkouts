@@ -1,5 +1,6 @@
 <script>
 	import { onMount } from 'svelte';
+	import RevealToggle from './RevealToggle.svelte';
 
 	/**
 	 * One form for both email paths: `signin` asks for email + password, `create` also asks for
@@ -18,6 +19,7 @@
 
 	let email = $state('');
 	let password = $state('');
+	let showPassword = $state(false);
 	let householdName = $state('');
 	/** @type {HTMLInputElement | undefined} */
 	let emailInput;
@@ -52,13 +54,18 @@
 	</div>
 
 	<div class="field">
-		<input
-			id="{id}-password"
-			type="password"
-			bind:value={password}
-			autocomplete={create ? 'new-password' : 'current-password'}
-			required
-		/>
+		<div class="pw">
+			<input
+				id="{id}-password"
+				type={showPassword ? 'text' : 'password'}
+				bind:value={password}
+				autocomplete={create ? 'new-password' : 'current-password'}
+				autocapitalize="off"
+				spellcheck="false"
+				required
+			/>
+			<RevealToggle bind:revealed={showPassword} label="password" />
+		</div>
 		<label for="{id}-password">Password</label>
 	</div>
 
@@ -102,6 +109,15 @@
 		background: transparent;
 		font: var(--dd-text-input) / 1.3 var(--dd-font-text);
 		color: var(--dd-ink);
+	}
+
+	.pw {
+		position: relative;
+	}
+
+	/* keeps typed text clear of the eyeball */
+	.pw input {
+		padding-right: 28px;
 	}
 
 	/* focus swaps the underline to stamp violet; the 1px padding trade keeps the row from jumping */

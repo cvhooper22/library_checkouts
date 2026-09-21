@@ -29,6 +29,9 @@
     .toolbar .spacer { flex: 1; }
     button { font: inherit; padding: 6px 12px; border-radius: 6px; border: 1px solid var(--line); background: var(--card); color: var(--text); cursor: pointer; }
     button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+    button.danger { color: var(--bad); }
+    td.actions { white-space: nowrap; }
+    td.actions button + button { margin-left: 6px; }
     button:disabled { opacity: .5; cursor: default; }
     .card { background: var(--card); border: 1px solid var(--line); border-radius: 8px; overflow-x: auto; }
     table { width: 100%; border-collapse: collapse; }
@@ -39,6 +42,13 @@
     .ok { color: var(--ok); } .bad { color: var(--bad); } .warn { color: var(--warn); }
     .err { max-width: 320px; word-break: break-word; }
     .empty { padding: 16px; color: var(--muted); }
+    details.add { margin-top: 10px; }
+    details.add summary { cursor: pointer; font-weight: 600; color: var(--accent); }
+    form.add { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px 12px; margin-top: 10px; padding: 12px; background: var(--card); border: 1px solid var(--line); border-radius: 8px; }
+    form.add label { display: flex; flex-direction: column; gap: 3px; font-size: 12px; color: var(--muted); }
+    form.add input, form.add select { font: inherit; padding: 6px 8px; border-radius: 6px; border: 1px solid var(--line); background: var(--bg); color: var(--text); }
+    form.add .wide { grid-column: 1 / -1; }
+    form.add .actions { display: flex; gap: 10px; align-items: center; }
     #banner { display: none; margin-bottom: 12px; padding: 8px 12px; border-radius: 6px; background: var(--remote-bg); color: var(--bad); }
   </style>
 </head>
@@ -60,6 +70,28 @@
     <thead><tr><th>Account</th><th>Library</th><th>Last run</th><th>Status</th><th></th></tr></thead>
     <tbody id="accounts"></tbody>
   </table></div>
+
+  <h2>Libraries</h2>
+  <div class="card"><table>
+    <thead><tr><th>Library</th><th>Scraper</th><th>Base URL</th><th>Accounts</th><th></th></tr></thead>
+    <tbody id="libraries"></tbody>
+  </table></div>
+  <details class="add">
+    <summary>Add a library</summary>
+    <form id="add-library" class="add" autocomplete="off">
+      <label>Name <input name="name" required placeholder="Butte County Library"></label>
+      <label>Slug <input name="slug" required pattern="[a-z0-9]+(-[a-z0-9]+)*" placeholder="butte-county-library"></label>
+      <label>Scraper <select name="scraperType" required></select></label>
+      <label class="wide">Base URL <input name="baseUrl" type="url" required placeholder="https://butte.bywatersolutions.com"></label>
+      <label>City <input name="city"></label>
+      <label>State <input name="state"></label>
+      <label>Postal code <input name="postalCode"></label>
+      <div class="wide actions">
+        <button class="primary" type="submit">Add library</button>
+        <span id="add-result" class="muted"></span>
+      </div>
+    </form>
+  </details>
 
   <h2>Recent runs</h2>
   <div class="card"><table>
@@ -89,9 +121,34 @@
     return el('span', { text: status ?? 'never run', className: cls });
   }
 
-  async function post(path) {
-    const response = await fetch(path, { method: 'POST' });
+  async function send(method, path, json) {
+    const response = await fetch(path, {
+      method,
+      ...(json && { headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(json) }),
+    });
     return { ok: response.ok, body: await response.json().catch(() => ({})) };
+  }
+  const post = (path, json) => send('POST', path, json);
+
+  const whichDb = () => `${state.db.local ? 'the local' : 'the REMOTE'} database (${state.db.host})`;
+
+  // A mutation's failure (e.g. "has accounts") is the server's explanation, so show it as-is.
+  async function changeLibrary(request) {
+    const { ok, body } = await request;
+    showBanner(ok ? '' : body.error || 'that did not work');
+    refresh();
+  }
+
+  function toggleLibrary(library) {
+    const activating = !library.isActive;
+    const note = activating ? '' : ' Existing accounts keep working; it just leaves the add-an-account picker.';
+    if (!confirm(`${activating ? 'Activate' : 'Deactivate'} "${library.name}" in ${whichDb()}?${note}`)) return;
+    changeLibrary(post(`/api/libraries/${library.id}/active`, { isActive: activating }));
+  }
+
+  function removeLibrary(library) {
+    if (!confirm(`Permanently delete "${library.name}" from ${whichDb()}? This cannot be undone.`)) return;
+    changeLibrary(send('DELETE', `/api/libraries/${library.id}`));
   }
 
   async function runAccount(account) {
@@ -142,6 +199,43 @@
     $('accounts').replaceChildren(...(rows.length ? rows : [el('tr', {}, el('td', { text: 'No accounts yet.', className: 'empty' }))]));
   }
 
+  function libraryActions(library) {
+    const toggle = el('button', { text: library.isActive ? 'Deactivate' : 'Activate' });
+    // The demo library must stay out of the picker (adr/0002-demo-mode.md); the server refuses too.
+    toggle.disabled = !library.isActive && library.scraperTypeDefault === 'demo';
+    toggle.addEventListener('click', () => toggleLibrary(library));
+
+    const remove = el('button', {
+      text: 'Delete',
+      className: 'danger',
+      title: library.canDelete ? '' : 'Has accounts (including removed ones) — deactivate instead',
+    });
+    remove.disabled = !library.canDelete;
+    remove.addEventListener('click', () => removeLibrary(library));
+
+    return el('td', { className: 'actions' }, toggle, remove);
+  }
+
+  function renderLibraries() {
+    const rows = state.libraries.map((library) => {
+      const place = [library.city, library.state].filter(Boolean).join(', ');
+      return el('tr', {},
+        cell(el('div', { text: library.name }),
+          el('div', { text: [library.slug, place, library.isActive ? '' : 'inactive'].filter(Boolean).join(' · '), className: 'muted' })),
+        cell(document.createTextNode(library.scraperTypeDefault)),
+        cell(el('span', { text: library.baseUrl, className: 'err' })),
+        cell(document.createTextNode(String(library.accountCount))),
+        libraryActions(library));
+    });
+    $('libraries').replaceChildren(...(rows.length ? rows : [el('tr', {}, el('td', { text: 'No libraries yet — add one below.', className: 'empty' }))]));
+
+    // Rebuilt only when the list changes, so a poll never resets a choice mid-form.
+    const select = document.querySelector('#add-library [name=scraperType]');
+    if (select.options.length !== state.scraperTypes.length) {
+      select.replaceChildren(...state.scraperTypes.map((type) => el('option', { text: type })));
+    }
+  }
+
   function renderRuns() {
     const rows = state.runs.map((run) => {
       const requested = run.status === 'running' && run.scraperVersion === 'pending';
@@ -168,6 +262,7 @@
     $('run-requested').disabled = requested === 0;
     $('run-all').disabled = accounts.length === 0;
     renderAccounts();
+    renderLibraries();
     renderRuns();
   }
 
@@ -186,10 +281,33 @@
 
   $('run-requested').addEventListener('click', async () => { await post('/api/run-requested'); refresh(); });
   $('run-all').addEventListener('click', async () => {
-    const where = state.db.local ? 'the local' : 'the REMOTE';
-    if (!confirm(`Scrape all ${state.accounts.length} accounts against ${where} database (${state.db.host})? They run one at a time.`)) return;
+    if (!confirm(`Scrape all ${state.accounts.length} accounts against ${whichDb()}? They run one at a time.`)) return;
     await post('/api/run-all');
     refresh();
+  });
+
+  const addForm = $('add-library');
+  const slugify = (text) => text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+  let slugEdited = false;
+  addForm.slug.addEventListener('input', () => { slugEdited = addForm.slug.value !== ''; });
+  addForm.name.addEventListener('input', () => { if (!slugEdited) addForm.slug.value = slugify(addForm.name.value); });
+
+  addForm.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const result = $('add-result');
+    const data = Object.fromEntries(new FormData(addForm));
+    if (!confirm(`Add "${data.name}" to ${whichDb()}?`)) return;
+
+    result.className = 'muted';
+    result.textContent = 'adding…';
+    const { ok, body } = await post('/api/libraries', data);
+    result.className = ok ? 'ok' : 'bad';
+    result.textContent = ok ? `Added “${body.library.name}”.` : (body.error || 'could not add the library');
+    if (ok) {
+      addForm.reset();
+      slugEdited = false;
+      refresh();
+    }
   });
 
   refresh();
