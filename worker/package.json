@@ -10,7 +10,8 @@
     "enqueue-daily:dev": "node --env-file=.env src/enqueueDaily.js",
     "reseed-demo": "node scripts/reseed-demo.js",
     "seed-test-fixtures": "node scripts/seed-test-fixtures.js",
-    "scrape-local": "node scripts/scrape-local.js"
+    "scrape-local": "node scripts/scrape-local.js",
+    "admin": "node --env-file=.env.admin admin/server.js"
   },
   "dependencies": {
     "@library-tracker/db": "file:../db",

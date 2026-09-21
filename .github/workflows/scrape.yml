@@ -1,0 +1,50 @@
+# Scrapes library accounts on GitHub's runners instead of a BullMQ worker.
+#   - workflow_dispatch: one account, triggered by POST /accounts/:id/refresh when the API
+#     runs with SCRAPE_BACKEND=github (api/src/queue.js).
+#   - schedule: every account in the households listed in the SCHEDULED_HOUSEHOLD_IDS
+#     repo variable (Settings > Secrets and variables > Actions > Variables).
+# Both run worker/scripts/run-scrape.js. GitHub runs scheduled workflows late under load,
+# only from the default branch, and pauses them after 60 days without repo activity.
+name: scrape
+
+on:
+  workflow_dispatch:
+    inputs:
+      accountId: { required: true, description: Account to scrape }
+      runId: { required: true, description: The runs row the API created for it }
+  schedule:
+    - cron: "0 13 * * *" # UTC: 6am PDT / 5am PST
+
+# Per-account, so two clicks on one account never scrape it at once. GitHub keeps only one
+# waiting run per group; a third request replaces the second, whose run row then stays
+# "running" until the frontend gives up.
+concurrency:
+  group: scrape-${{ inputs.accountId || 'scheduled' }}
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    timeout-minutes: ${{ github.event_name == 'schedule' && 45 || 10 }}
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      CREDENTIAL_ENCRYPTION_KEY: ${{ secrets.CREDENTIAL_ENCRYPTION_KEY }}
+      NODE_ENV: production # keeps the test-* fixture scrapers unregistered
+      SCRAPER_VERSION: github-${{ github.run_id }}
+      PUPPETEER_SKIP_DOWNLOAD: "true" # runners already have Chrome
+      PUPPETEER_EXECUTABLE_PATH: /usr/bin/google-chrome
+      # Inputs go through env, never interpolated into a shell command.
+      ACCOUNT_ID: ${{ inputs.accountId }}
+      RUN_ID: ${{ inputs.runId }}
+      SCHEDULED_HOUSEHOLD_IDS: ${{ vars.SCHEDULED_HOUSEHOLD_IDS }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: "**/package-lock.json"
+      # Ubuntu 24.04 blocks the user namespaces Chrome's sandbox needs. Absent on older images.
+      - run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0 || true
+      - run: cd db && npm ci --include=dev && npx prisma generate
+      - run: cd worker && npm ci --omit=dev
+      - run: node worker/scripts/run-scrape.js

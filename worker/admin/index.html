@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Scrape admin</title>
+  <style>
+    :root {
+      --bg: #f6f5f1; --card: #fff; --text: #1d1d1b; --muted: #6b6a63; --line: #e2e0d8;
+      --accent: #1f5f8b; --ok: #1f7a45; --bad: #b3261e; --warn: #9a6a00;
+      --remote-bg: #fdecea; --local-bg: #e8f3ec;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #16171a; --card: #1e2024; --text: #ecebe6; --muted: #9b9a92; --line: #33353b;
+        --accent: #6db3e0; --ok: #5fc08a; --bad: #f2867f; --warn: #e3b64d;
+        --remote-bg: #3a1f1d; --local-bg: #1c2e23;
+      }
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.45 system-ui, sans-serif; }
+    main { max-width: 1000px; margin: 0 auto; padding: 20px 16px 48px; }
+    h1 { font-size: 20px; margin: 0 0 12px; }
+    h2 { font-size: 15px; margin: 28px 0 8px; }
+    .db { display: inline-block; padding: 6px 10px; border-radius: 6px; font-weight: 600; margin-bottom: 14px; }
+    .db.remote { background: var(--remote-bg); color: var(--bad); }
+    .db.local { background: var(--local-bg); color: var(--ok); }
+    .toolbar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 12px; }
+    .toolbar .spacer { flex: 1; }
+    button { font: inherit; padding: 6px 12px; border-radius: 6px; border: 1px solid var(--line); background: var(--card); color: var(--text); cursor: pointer; }
+    button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+    button:disabled { opacity: .5; cursor: default; }
+    .card { background: var(--card); border: 1px solid var(--line); border-radius: 8px; overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+    th { font-size: 12px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); font-weight: 600; }
+    tr:last-child td { border-bottom: 0; }
+    .muted { color: var(--muted); }
+    .ok { color: var(--ok); } .bad { color: var(--bad); } .warn { color: var(--warn); }
+    .err { max-width: 320px; word-break: break-word; }
+    .empty { padding: 16px; color: var(--muted); }
+    #banner { display: none; margin-bottom: 12px; padding: 8px 12px; border-radius: 6px; background: var(--remote-bg); color: var(--bad); }
+  </style>
+</head>
+<body>
+<main>
+  <h1>Scrape admin</h1>
+  <div id="banner"></div>
+  <div id="db" class="db muted">connecting…</div>
+
+  <div class="toolbar">
+    <button id="run-requested" class="primary" disabled>Run requested refreshes</button>
+    <button id="run-all" disabled>Run all accounts</button>
+    <span class="spacer"></span>
+    <span id="activity" class="muted"></span>
+  </div>
+
+  <h2>Accounts</h2>
+  <div class="card"><table>
+    <thead><tr><th>Account</th><th>Library</th><th>Last run</th><th>Status</th><th></th></tr></thead>
+    <tbody id="accounts"></tbody>
+  </table></div>
+
+  <h2>Recent runs</h2>
+  <div class="card"><table>
+    <thead><tr><th>Account</th><th>Started</th><th>Finished</th><th>Status</th><th>Error</th></tr></thead>
+    <tbody id="runs"></tbody>
+  </table></div>
+</main>
+
+<script>
+  const $ = (id) => document.getElementById(id);
+  const fmt = (value) => (value ? new Date(value).toLocaleString() : '—');
+  let state = null;
+
+  // Everything user-supplied (display names, error text) goes in via textContent, never innerHTML.
+  function el(tag, { text, className, title } = {}, ...children) {
+    const node = document.createElement(tag);
+    if (text !== undefined) node.textContent = text;
+    if (className) node.className = className;
+    if (title) node.title = title;
+    node.append(...children);
+    return node;
+  }
+  const cell = (...children) => el('td', {}, ...children);
+
+  function statusNode(status) {
+    const cls = status === 'success' ? 'ok' : status === 'failed' ? 'bad' : 'muted';
+    return el('span', { text: status ?? 'never run', className: cls });
+  }
+
+  async function post(path) {
+    const response = await fetch(path, { method: 'POST' });
+    return { ok: response.ok, body: await response.json().catch(() => ({})) };
+  }
+
+  async function runAccount(account) {
+    const { ok, body } = await post(`/api/accounts/${account.id}/run`);
+    if (!ok) showBanner(body.result === 'in-progress-elsewhere'
+      ? `${account.displayName} already has a scrape in progress somewhere else (started in the last 10 minutes).`
+      : `${account.displayName} is already queued or running.`);
+    refresh();
+  }
+
+  function showBanner(message) {
+    const banner = $('banner');
+    banner.textContent = message;
+    banner.style.display = message ? 'block' : 'none';
+  }
+
+  function renderAccounts() {
+    const rows = state.accounts.map((account) => {
+      const busy = account.job !== null;
+      const status = busy
+        ? el('span', { text: account.job === 'running' ? 'running…' : 'queued…', className: 'warn' })
+        : statusNode(account.lastStatus);
+      const notes = [];
+      if (account.requested) {
+        notes.push(el('div', {
+          text: `refresh requested${account.requested.count > 1 ? ` ×${account.requested.count}` : ''} · ${fmt(account.requested.since)}`,
+          className: 'warn',
+        }));
+      }
+      const outcome = account.lastOutcome;
+      if (outcome && !busy) {
+        notes.push(el('div', {
+          text: outcome.ok ? (outcome.skipped ? 'skipped (deleted)' : 'done this session') : `failed: ${outcome.error}`,
+          className: `${outcome.ok ? 'muted' : 'bad'} err`,
+        }));
+      }
+      const button = el('button', { text: 'Run now' });
+      button.disabled = busy;
+      button.addEventListener('click', () => runAccount(account));
+
+      return el('tr', {},
+        cell(el('div', { text: account.displayName }), el('div', { text: account.household.name, className: 'muted' })),
+        cell(el('div', { text: account.library.name }), el('div', { text: account.scraperType, className: 'muted' })),
+        cell(document.createTextNode(fmt(account.lastRunAt))),
+        cell(status, ...notes),
+        cell(button));
+    });
+    $('accounts').replaceChildren(...(rows.length ? rows : [el('tr', {}, el('td', { text: 'No accounts yet.', className: 'empty' }))]));
+  }
+
+  function renderRuns() {
+    const rows = state.runs.map((run) => {
+      const requested = run.status === 'running' && run.scraperVersion === 'pending';
+      return el('tr', {},
+        cell(document.createTextNode(run.account.displayName)),
+        cell(document.createTextNode(fmt(run.startedAt))),
+        cell(document.createTextNode(fmt(run.finishedAt))),
+        cell(requested ? el('span', { text: 'requested', className: 'warn' }) : statusNode(run.status)),
+        cell(el('span', { text: run.error ?? '', className: 'bad err' })));
+    });
+    $('runs').replaceChildren(...(rows.length ? rows : [el('tr', {}, el('td', { text: 'No runs yet.', className: 'empty' }))]));
+  }
+
+  function render() {
+    const { db, accounts } = state;
+    const badge = $('db');
+    badge.className = `db ${db.local ? 'local' : 'remote'}`;
+    badge.textContent = `${db.local ? 'LOCAL' : 'REMOTE'} database · ${db.host}/${db.name}`;
+
+    const running = accounts.filter((a) => a.job !== null).length;
+    const requested = accounts.filter((a) => a.requested).length;
+    $('activity').textContent = running ? `${running} scrape${running > 1 ? 's' : ''} queued or running` : 'idle';
+    $('run-requested').textContent = `Run requested refreshes (${requested})`;
+    $('run-requested').disabled = requested === 0;
+    $('run-all').disabled = accounts.length === 0;
+    renderAccounts();
+    renderRuns();
+  }
+
+  let timer;
+  async function refresh() {
+    clearTimeout(timer);
+    try {
+      state = await (await fetch('/api/state')).json();
+      render();
+    } catch {
+      $('activity').textContent = 'lost connection to the admin server';
+    }
+    const active = state && state.accounts.some((a) => a.job !== null);
+    timer = setTimeout(refresh, active ? 2000 : 10000);
+  }
+
+  $('run-requested').addEventListener('click', async () => { await post('/api/run-requested'); refresh(); });
+  $('run-all').addEventListener('click', async () => {
+    const where = state.db.local ? 'the local' : 'the REMOTE';
+    if (!confirm(`Scrape all ${state.accounts.length} accounts against ${where} database (${state.db.host})? They run one at a time.`)) return;
+    await post('/api/run-all');
+    refresh();
+  });
+
+  refresh();
+</script>
+</body>
+</html>

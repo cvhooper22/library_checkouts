@@ -69,6 +69,7 @@ web_modules/
 .env
 .env.*
 !.env.example
+!.env.*.example
 
 # scraper debug artifacts (may contain account data)
 scraper-debug.png

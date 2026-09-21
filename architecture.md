@@ -191,9 +191,10 @@ Small Express/Fastify service. Token-based auth from day one (not cookie/session
 | `POST` | `/auth/login` | Returns a token |
 | `POST` | `/auth/demo` | No credentials required — returns a token scoped to the shared demo household, for the "Try it out" flow. Gated by `DEMO_MODE_ENABLED`, rate-limited independently of `/auth/login`. See adr/0002-demo-mode.md |
 | `GET` | `/me` | The token's user and the households they belong to (with role) — how a client builds its session after `/auth/login` or `/auth/google`, which return only a token |
+| `GET` | `/features` | Which optional features are on, e.g. `{ "features": { "refresh": false } }`. The frontend reads it on each dashboard load to hide what the API would refuse. Flags are env vars (`REFRESH_ENABLED`), opt-in: on only when exactly `true` |
 | `GET` | `/households/:id/checkouts` | Current (non-returned) checkouts across all accounts in a household |
 | `GET` | `/accounts/:id/runs` | Run history for one account (debugging/status) |
-| `POST` | `/accounts/:id/refresh` | Enqueues an on-demand scrape job for one account |
+| `POST` | `/accounts/:id/refresh` | Enqueues an on-demand scrape job for one account. Behind the `refresh` feature flag: `404` when it's off |
 | `DELETE` | `/accounts/:id` | Soft-deletes a library account (sets `deleted_at`; `204`). It disappears from the household's accounts and checkouts and is no longer scraped |
 | `GET` | `/accounts/:id/status` | Latest run status for one account (the account's `last_status` plus its newest run) |
 | `GET` | `/households/:id/runs?ids=a,b,c` | Poll endpoint for the frontend "refreshing…" UI — status of specific runs (the `run_id`s from `/refresh`), one request for any number of cards. Only runs of the household's own accounts are returned; ids from elsewhere come back missing. Up to 100 ids; no `raw_output` |
