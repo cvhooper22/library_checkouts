@@ -3,6 +3,7 @@ const prisma = require('@library-tracker/db');
 const { requireAccountAccess } = require('../auth/middleware');
 const { enqueueRefresh } = require('../queue');
 const { requireFeature } = require('../features');
+const { HttpError } = require('../lib/errors');
 
 const router = express.Router();
 
@@ -48,7 +49,17 @@ router.post('/:id/refresh', requireFeature('refresh'), requireAccountAccess, asy
     data: { accountId: req.account.id, status: 'running', scraperVersion: 'pending' },
   });
 
-  await enqueueRefresh({ accountId: req.account.id, runId: run.id });
+  try {
+    await enqueueRefresh({ accountId: req.account.id, runId: run.id });
+  } catch (error) {
+    // Nothing will ever pick this run up; settle it now rather than leave it "running".
+    console.error(`[api] could not start refresh for run ${run.id}:`, error.message);
+    await prisma.run.update({
+      where: { id: run.id },
+      data: { status: 'failed', finishedAt: new Date(), error: 'Could not start the scrape' },
+    });
+    throw new HttpError(502, 'Could not start the refresh');
+  }
 
   res.status(202).json({ runId: run.id, status: run.status });
 });

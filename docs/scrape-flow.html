@@ -1,0 +1,450 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>Checkout Scrape Flow</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+  :root {
+    --bg: #eef2f5;
+    --surface: #ffffff;
+    --surface-2: #f4f7f9;
+    --ink: #14202b;
+    --ink-2: #3b4c5c;
+    --muted: #5b6d7d;
+    --edge: #c3cfd9;
+    --accent: #0b7a6e;
+    --accent-soft: #e1f3f0;
+    --bad: #b42318;
+    --bad-soft: #fdeceb;
+    --display: "Bricolage Grotesque", "IBM Plex Sans", system-ui, sans-serif;
+    --body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0d141b;
+      --surface: #151f29;
+      --surface-2: #1b2733;
+      --ink: #e8eef3;
+      --ink-2: #b7c5d1;
+      --muted: #91a3b2;
+      --edge: #33475a;
+      --accent: #35d0bd;
+      --accent-soft: #113a36;
+      --bad: #ff8f85;
+      --bad-soft: #3b2020;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0d141b;
+    --surface: #151f29;
+    --surface-2: #1b2733;
+    --ink: #e8eef3;
+    --ink-2: #b7c5d1;
+    --muted: #91a3b2;
+    --edge: #33475a;
+    --accent: #35d0bd;
+    --accent-soft: #113a36;
+    --bad: #ff8f85;
+    --bad-soft: #3b2020;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font: 15px/1.6 var(--body);
+    padding-inline: 16px;
+    padding-block: 32px 64px;
+  }
+  main { max-width: 1040px; margin: 0 auto; display: flex; flex-direction: column; gap: 40px; }
+  h1 {
+    font: 700 clamp(28px, 5vw, 40px)/1.1 var(--display);
+    letter-spacing: -0.02em;
+    margin: 0 0 12px;
+    text-wrap: balance;
+  }
+  h2 { font: 600 22px/1.25 var(--display); letter-spacing: -0.01em; margin: 0 0 6px; text-wrap: balance; }
+  p { margin: 0; max-width: 68ch; }
+  p + p { margin-top: 10px; }
+  .lede { font-size: 17px; color: var(--ink-2); max-width: 64ch; }
+  code {
+    font: 500 0.88em var(--mono);
+    background: var(--surface-2);
+    border: 1px solid var(--edge);
+    border-radius: 4px;
+    padding: 1px 5px;
+    overflow-wrap: anywhere;
+  }
+  section { display: flex; flex-direction: column; gap: 14px; }
+  .sub { color: var(--ink-2); }
+
+  .status {
+    background: var(--surface);
+    border: 1px solid var(--edge);
+    border-radius: 8px;
+    padding: 14px 16px;
+    max-width: 78ch;
+  }
+  .status b {
+    display: block;
+    font: 500 11px/1 var(--mono);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+
+  figure { margin: 0; background: var(--surface); border: 1px solid var(--edge); border-radius: 10px; padding: 16px 16px 14px; }
+  .scroll { overflow-x: auto; }
+  figcaption { color: var(--ink-2); font-size: 13.5px; margin-top: 10px; max-width: 80ch; }
+  svg { display: block; height: auto; max-width: none; }
+  .w1 { min-width: 780px; width: 100%; }
+  .w2 { min-width: 900px; width: 100%; }
+  .w3 { min-width: 700px; width: 100%; }
+
+  /* SVG marks — all colors come from the theme tokens */
+  svg text { font-family: var(--body); fill: var(--ink); font-size: 12px; }
+  .h { font-weight: 600; font-size: 13px; }
+  .m { font-family: var(--mono); }
+  .s { fill: var(--muted); font-size: 10.5px; }
+  .s.m { font-size: 10.5px; }
+  .c { text-anchor: middle; }
+  .lbl { font-family: var(--mono); font-size: 10.5px; text-anchor: middle; paint-order: stroke; stroke: var(--surface); stroke-width: 5px; stroke-linejoin: round; }
+  .lbl .n, .n { font-weight: 600; fill: var(--accent); }
+  .badtxt { fill: var(--bad); }
+  .band-title { font: 500 10px var(--mono); letter-spacing: 0.08em; text-transform: uppercase; fill: var(--muted); }
+
+  .node { fill: var(--surface); stroke: var(--edge); stroke-width: 1.25; }
+  .node.on { stroke: var(--accent); stroke-width: 1.75; fill: var(--accent-soft); }
+  .node.core { stroke: var(--ink-2); stroke-width: 1.75; }
+  .node.off { fill: var(--surface-2); stroke-dasharray: 5 4; }
+  .node.fail { stroke: var(--bad); stroke-dasharray: 4 3; fill: var(--bad-soft); }
+  .head { fill: var(--surface-2); stroke: var(--edge); stroke-width: 1.25; }
+  .life { stroke: var(--edge); stroke-width: 1; stroke-dasharray: 3 5; }
+  .band { fill: none; stroke: var(--edge); stroke-width: 1; stroke-dasharray: 2 4; }
+
+  .arr { stroke: var(--ink-2); stroke-width: 1.5; fill: none; }
+  .arr.on { stroke: var(--accent); stroke-width: 2; }
+  .arr.ret { stroke-dasharray: 5 4; }
+  .arr.off { stroke: var(--muted); stroke-dasharray: 5 4; }
+  .arr.bad { stroke: var(--bad); }
+  .mk { fill: var(--ink-2); }
+  .mk-on { fill: var(--accent); }
+  .mk-off { fill: var(--muted); }
+  .mk-bad { fill: var(--bad); }
+
+  .legend { display: flex; flex-wrap: wrap; gap: 8px 20px; margin-top: 12px; font-size: 13px; color: var(--ink-2); }
+  .legend span { display: inline-flex; align-items: center; gap: 8px; }
+  .sw { width: 30px; height: 0; border-top: 2px solid var(--accent); }
+  .sw.off { border-top: 2px dashed var(--muted); }
+  .sw.bad { border-top: 2px dashed var(--bad); }
+
+  .table-wrap { overflow-x: auto; background: var(--surface); border: 1px solid var(--edge); border-radius: 10px; }
+  table { border-collapse: collapse; width: 100%; min-width: 640px; font-size: 14px; }
+  th, td { text-align: left; vertical-align: top; padding: 10px 14px; border-bottom: 1px solid var(--edge); }
+  tr:last-child td { border-bottom: 0; }
+  th { font: 500 11px/1.2 var(--mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); background: var(--surface-2); }
+  td:first-child { width: 34%; }
+  .pill { font: 500 11px var(--mono); border-radius: 999px; padding: 2px 8px; border: 1px solid var(--edge); color: var(--ink-2); white-space: nowrap; }
+  .pill.bad { border-color: var(--bad); color: var(--bad); }
+
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  @media (max-width: 560px) { td:first-child { width: auto; } }
+</style>
+</head>
+<body>
+
+<main>
+  <header>
+    <h1>Checkout Scrape Flow</h1>
+    <p class="lede">A scrape is one function with three ways to start it. Here is how the Re-stamp button reaches a library site through GitHub Actions, how the nightly run picks its accounts, and where each switch sits.</p>
+  </header>
+
+  <div class="status">
+    <b>Where this stands</b>
+    <p>The run script and the API's dispatch call are tested locally, with GitHub stubbed. The workflow itself hasn't run on GitHub yet. A first manual run will settle the two open questions: whether Chrome's sandbox starts on the runner, and whether the library site accepts GitHub's IP addresses.</p>
+  </div>
+
+  <!-- FIGURE 1 -->
+  <section>
+    <div>
+      <h2>One function, three triggers</h2>
+      <p class="sub">Everything that scrapes ends in <code>runScrape()</code>, so decryption, validation and what gets written never depend on who started it.</p>
+    </div>
+    <figure>
+      <div class="scroll">
+        <svg class="w1" viewBox="0 0 860 320" role="img" aria-label="Three triggers, GitHub Actions, the local admin page and a BullMQ worker, all call runScrape, which scrapes the library site and writes runs and checkouts to Postgres. The BullMQ path is dimmed because it is kept for later.">
+          <defs>
+            <marker id="ah-f1" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path class="mk" d="M0,0 L8,4 L0,8 z"/></marker>
+            <marker id="ahon-f1" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path class="mk-on" d="M0,0 L8,4 L0,8 z"/></marker>
+            <marker id="ahoff-f1" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path class="mk-off" d="M0,0 L8,4 L0,8 z"/></marker>
+          </defs>
+
+          <!-- triggers -->
+          <rect class="node on" x="20" y="30" width="250" height="72" rx="8"/>
+          <text class="h" x="36" y="54">GitHub Actions</text>
+          <text class="s" x="36" y="72">on demand, plus nightly schedule</text>
+          <text class="s m" x="36" y="88">worker/scripts/run-scrape.js</text>
+
+          <rect class="node on" x="20" y="132" width="250" height="72" rx="8"/>
+          <text class="h" x="36" y="156">Local admin page</text>
+          <text class="s" x="36" y="174">your laptop, 127.0.0.1:4100</text>
+          <text class="s m" x="36" y="190">worker/admin/server.js</text>
+
+          <rect class="node off" x="20" y="234" width="250" height="72" rx="8"/>
+          <text class="h" x="36" y="258" style="fill: var(--muted)">BullMQ worker</text>
+          <text class="s" x="36" y="276">Redis plus an always-on Render worker</text>
+          <text class="s m" x="36" y="292">worker/src/index.js · kept for later</text>
+
+          <!-- trigger arrows -->
+          <line class="arr on" x1="270" y1="66" x2="358" y2="140" marker-end="url(#ahon-f1)"/>
+          <text class="lbl" x="313" y="99">ACCOUNT_ID, RUN_ID</text>
+          <line class="arr on" x1="270" y1="168" x2="358" y2="165" marker-end="url(#ahon-f1)"/>
+          <text class="lbl" x="313" y="158">Run now</text>
+          <line class="arr off" x1="270" y1="270" x2="358" y2="190" marker-end="url(#ahoff-f1)"/>
+          <text class="lbl" x="313" y="237">job.data</text>
+
+          <!-- the shared function -->
+          <rect class="node core" x="360" y="104" width="240" height="122" rx="8"/>
+          <text class="h m c" x="480" y="134" style="font-size:14px">runScrape()</text>
+          <text class="s m c" x="480" y="152">worker/src/runScrape.js</text>
+          <text class="c" x="480" y="182">decrypt → scrape → validate</text>
+          <text class="c" x="480" y="200">→ upsert checkouts, set run status</text>
+
+          <!-- targets -->
+          <rect class="node" x="700" y="44" width="150" height="64" rx="8"/>
+          <text class="h" x="716" y="70">Library site</text>
+          <text class="s" x="716" y="88">Chrome logs in, reads</text>
+
+          <rect class="node" x="700" y="222" width="150" height="64" rx="8"/>
+          <text class="h" x="716" y="248">Postgres</text>
+          <text class="s" x="716" y="266">runs, checkouts</text>
+
+          <line class="arr" x1="600" y1="136" x2="698" y2="84" marker-end="url(#ah-f1)"/>
+          <text class="lbl" x="654" y="102">scrapes</text>
+          <line class="arr" x1="600" y1="194" x2="698" y2="248" marker-end="url(#ah-f1)"/>
+          <text class="lbl" x="654" y="232">writes</text>
+        </svg>
+      </div>
+      <div class="legend">
+        <span><i class="sw"></i> in use in this setup</span>
+        <span><i class="sw off"></i> kept, currently off</span>
+      </div>
+      <figcaption>The queue path still exists in the code. <code>SCRAPE_BACKEND</code> decides which trigger the API uses; the other two don't go through the API at all.</figcaption>
+    </figure>
+  </section>
+
+  <!-- FIGURE 2 -->
+  <section>
+    <div>
+      <h2>On demand: the Re-stamp button</h2>
+      <p class="sub">The frontend never waits on the scrape. It gets a run id back at step 5, then polls that run's row while the runner does the work.</p>
+    </div>
+    <figure>
+      <div class="scroll">
+        <svg class="w2" viewBox="0 0 960 720" role="img" aria-label="Sequence of an on-demand refresh. The frontend posts to the API, which checks guards, creates a run row in Postgres, dispatches the GitHub workflow and returns 202 with a run id. The frontend then polls for status every 3 seconds while a GitHub runner installs dependencies, reads the account, logs in to the library site, scrapes, and writes checkouts and the run result to Postgres. The next poll sees success and the frontend reloads.">
+          <defs>
+            <marker id="ah-f2" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path class="mk" d="M0,0 L8,4 L0,8 z"/></marker>
+            <marker id="ahon-f2" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path class="mk-on" d="M0,0 L8,4 L0,8 z"/></marker>
+          </defs>
+
+          <!-- lanes -->
+          <g>
+            <rect class="head" x="22" y="8" width="156" height="34" rx="6"/><text class="h c" x="100" y="30">Frontend</text>
+            <rect class="head" x="212" y="8" width="156" height="34" rx="6"/><text class="h c" x="290" y="30">API</text>
+            <rect class="head" x="402" y="8" width="156" height="34" rx="6"/><text class="h c" x="480" y="30">Postgres</text>
+            <rect class="head" x="592" y="8" width="156" height="34" rx="6"/><text class="h c" x="670" y="30">GitHub Actions</text>
+            <rect class="head" x="782" y="8" width="156" height="34" rx="6"/><text class="h c" x="860" y="30">Library site</text>
+          </g>
+          <line class="life" x1="100" y1="42" x2="100" y2="714"/>
+          <line class="life" x1="290" y1="42" x2="290" y2="714"/>
+          <line class="life" x1="480" y1="42" x2="480" y2="714"/>
+          <line class="life" x1="670" y1="42" x2="670" y2="620"/>
+          <line class="life" x1="860" y1="42" x2="860" y2="620"/>
+
+          <!-- request phase -->
+          <line class="arr" x1="100" y1="92" x2="288" y2="92" marker-end="url(#ah-f2)"/>
+          <text class="lbl" x="195" y="84"><tspan class="n">1</tspan> POST /accounts/:id/refresh</text>
+
+          <rect class="node" x="195" y="104" width="190" height="74" rx="6"/>
+          <text class="s m" x="207" y="121" style="fill: var(--ink)"><tspan class="n">2</tspan> guards, in order</text>
+          <text class="s m" x="207" y="136">demo token → 403</text>
+          <text class="s m" x="207" y="151">flag off → 404</text>
+          <text class="s m" x="207" y="166">not a member → 404</text>
+
+          <line class="arr" x1="290" y1="208" x2="478" y2="208" marker-end="url(#ah-f2)"/>
+          <text class="lbl" x="385" y="200"><tspan class="n">3</tspan> create run row (pending)</text>
+
+          <line class="arr on" x1="290" y1="246" x2="668" y2="246" marker-end="url(#ahon-f2)"/>
+          <text class="lbl" x="480" y="238"><tspan class="n">4</tspan> workflow_dispatch { accountId, runId }</text>
+
+          <rect class="node fail" x="190" y="258" width="200" height="40" rx="6"/>
+          <text class="s m badtxt" x="202" y="274">if dispatch fails:</text>
+          <text class="s m badtxt" x="202" y="289">run = failed, client gets 502</text>
+
+          <line class="arr ret" x1="290" y1="330" x2="102" y2="330" marker-end="url(#ah-f2)"/>
+          <text class="lbl" x="195" y="322"><tspan class="n">5</tspan> 202 { runId }</text>
+
+          <!-- parallel bands -->
+          <rect class="band" x="16" y="352" width="372" height="270" rx="8"/>
+          <text class="band-title" x="30" y="371">frontend polls</text>
+          <rect class="band" x="404" y="352" width="540" height="270" rx="8"/>
+          <text class="band-title" x="418" y="371">meanwhile, on the runner</text>
+
+          <line class="arr" x1="100" y1="420" x2="288" y2="420" marker-end="url(#ah-f2)"/>
+          <text class="lbl" x="195" y="412"><tspan class="n">6</tspan> GET …/runs?ids=runId</text>
+          <line class="arr ret" x1="290" y1="458" x2="102" y2="458" marker-end="url(#ah-f2)"/>
+          <text class="lbl" x="195" y="450"><tspan class="n">7</tspan> { status: running }</text>
+          <text class="s" x="30" y="500">Repeats every 3 s until every run settles.</text>
+          <text class="s" x="30" y="516">After 3 min it stops and shows “Still working…”.</text>
+
+          <rect class="node on" x="575" y="384" width="190" height="42" rx="6"/>
+          <text class="s m" x="587" y="401" style="fill: var(--ink)"><tspan class="n">8</tspan> install deps, start Chrome</text>
+          <text class="s m" x="587" y="417">cold start, about 40–90 s</text>
+
+          <line class="arr" x1="670" y1="470" x2="482" y2="470" marker-end="url(#ah-f2)"/>
+          <text class="lbl" x="575" y="462"><tspan class="n">9</tspan> read account, mark running</text>
+          <line class="arr" x1="670" y1="510" x2="858" y2="510" marker-end="url(#ah-f2)"/>
+          <text class="lbl" x="765" y="502"><tspan class="n">10</tspan> log in, scrape</text>
+          <line class="arr ret" x1="860" y1="548" x2="672" y2="548" marker-end="url(#ah-f2)"/>
+          <text class="lbl" x="765" y="540"><tspan class="n">11</tspan> checkouts list</text>
+          <line class="arr" x1="670" y1="588" x2="482" y2="588" marker-end="url(#ah-f2)"/>
+          <text class="lbl" x="575" y="580"><tspan class="n">12</tspan> write checkouts, run done</text>
+          <text class="s m c badtxt" x="575" y="608">any scraper error → run = failed</text>
+
+          <!-- settle -->
+          <line class="arr ret" x1="290" y1="650" x2="102" y2="650" marker-end="url(#ah-f2)"/>
+          <text class="lbl" x="195" y="642"><tspan class="n">13</tspan> { status: success }</text>
+          <rect class="node on" x="22" y="664" width="156" height="32" rx="6"/>
+          <text class="s m c" x="100" y="684" style="fill: var(--ink)"><tspan class="n">14</tspan> reload checkouts</text>
+        </svg>
+      </div>
+      <figcaption>Steps 6–7 and 8–12 run at the same time. The frontend only ever reads the run row; the runner is the only thing that finishes it.</figcaption>
+    </figure>
+    <p>Re-stamp is enabled only when <code>GET /features</code> reports <code>refresh: true</code>, which is <code>REFRESH_ENABLED=true</code> on the API. If <code>SCRAPE_BACKEND</code> is unset, step 4 becomes a BullMQ <code>queue.add</code> and steps 8–12 happen in the always-on worker instead. Nothing else changes.</p>
+  </section>
+
+  <!-- FIGURE 3 -->
+  <section>
+    <div>
+      <h2>Scheduled: nightly, for chosen households</h2>
+      <p class="sub">No API involved. GitHub's clock starts the workflow, and the script decides which accounts to scrape from one repo variable.</p>
+    </div>
+    <figure>
+      <div class="scroll">
+        <svg class="w3" viewBox="0 0 780 690" role="img" aria-label="Flow of the scheduled run. Cron fires at 13:00 UTC, the runner starts the script, which checks whether any household IDs are configured. If none, it logs nothing to do and exits 0. Otherwise it finds accounts in those households that are not demo and not deleted, then scrapes each one in turn, logging successes and failures and continuing after a failure. It exits 1 if any failed.">
+          <defs>
+            <marker id="ah-f3" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path class="mk" d="M0,0 L8,4 L0,8 z"/></marker>
+            <marker id="ahon-f3" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path class="mk-on" d="M0,0 L8,4 L0,8 z"/></marker>
+            <marker id="ahbad-f3" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path class="mk-bad" d="M0,0 L8,4 L0,8 z"/></marker>
+          </defs>
+
+          <rect class="node on" x="150" y="16" width="220" height="54" rx="27"/>
+          <text class="h c" x="260" y="40">cron · 13:00 UTC</text>
+          <text class="s c" x="260" y="57">default branch only, can start late</text>
+          <line class="arr" x1="260" y1="70" x2="260" y2="102" marker-end="url(#ah-f3)"/>
+
+          <rect class="node" x="110" y="104" width="300" height="52" rx="8"/>
+          <text class="h c" x="260" y="126">runner: install, run-scrape.js</text>
+          <text class="s m c" x="260" y="143">no ACCOUNT_ID → scheduled mode</text>
+          <line class="arr" x1="260" y1="156" x2="260" y2="188" marker-end="url(#ah-f3)"/>
+
+          <polygon class="node" points="260,190 390,236 260,282 130,236"/>
+          <text class="s c" x="260" y="232" style="fill: var(--ink)">any household</text>
+          <text class="s c" x="260" y="247" style="fill: var(--ink)">IDs configured?</text>
+
+          <line class="arr" x1="390" y1="236" x2="468" y2="236" marker-end="url(#ah-f3)"/>
+          <text class="lbl" x="429" y="228">no</text>
+          <rect class="node off" x="470" y="210" width="270" height="52" rx="8"/>
+          <text class="s m" x="484" y="232" style="fill: var(--ink)">SCHEDULED_HOUSEHOLD_IDS empty</text>
+          <text class="s" x="484" y="249">logs “nothing to do”, exits 0</text>
+
+          <line class="arr on" x1="260" y1="282" x2="260" y2="324" marker-end="url(#ahon-f3)"/>
+          <text class="lbl" x="284" y="308">yes</text>
+
+          <rect class="node" x="110" y="326" width="300" height="56" rx="8"/>
+          <text class="h c" x="260" y="348">find the accounts</text>
+          <text class="s c" x="260" y="366">in those households · not demo · not deleted</text>
+          <line class="arr" x1="260" y1="382" x2="260" y2="418" marker-end="url(#ah-f3)"/>
+
+          <rect class="band" x="60" y="420" width="660" height="156" rx="10"/>
+          <text class="band-title" x="76" y="440">for each account, one at a time</text>
+
+          <rect class="node core" x="90" y="456" width="250" height="90" rx="8"/>
+          <text class="h m" x="106" y="480" style="font-size:12.5px">runScrape({ accountId })</text>
+          <text class="s" x="106" y="499">creates its own run row</text>
+          <text class="s" x="106" y="515">decrypt → scrape → validate → write</text>
+          <text class="s" x="106" y="531">no runId, so nothing to answer</text>
+
+          <line class="arr on" x1="340" y1="488" x2="418" y2="478" marker-end="url(#ahon-f3)"/>
+          <rect class="node on" x="420" y="452" width="280" height="46" rx="6"/>
+          <text class="s m" x="434" y="472" style="fill: var(--ink)">ok → run = success</text>
+          <text class="s" x="434" y="488">checkouts updated, logged</text>
+
+          <line class="arr bad" x1="340" y1="514" x2="418" y2="524" marker-end="url(#ahbad-f3)"/>
+          <rect class="node fail" x="420" y="502" width="280" height="46" rx="6"/>
+          <text class="s m badtxt" x="434" y="522">throws → run = failed</text>
+          <text class="s" x="434" y="538">counted, and the loop carries on</text>
+
+          <line class="arr" x1="260" y1="576" x2="260" y2="622" marker-end="url(#ah-f3)"/>
+          <rect class="node" x="110" y="624" width="300" height="48" rx="24"/>
+          <text class="h c" x="260" y="645">after the last account</text>
+          <text class="s c" x="260" y="661">exit 1 if any failed, else 0</text>
+        </svg>
+      </div>
+      <figcaption>The selection uses the same exclusions as the old daily enqueue: demo households and deleted accounts are never scraped. An empty or unset variable selects nothing, so the schedule stays off until you opt households in.</figcaption>
+    </figure>
+  </section>
+
+  <!-- SWITCHES -->
+  <section>
+    <div>
+      <h2>Where each switch lives</h2>
+      <p class="sub">Four places hold configuration. Only the API's is changed on Render.</p>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Setting</th><th>Set on</th><th>What it does</th></tr></thead>
+        <tbody>
+          <tr><td><code>REFRESH_ENABLED=true</code></td><td>API env</td><td>Turns on the refresh endpoint and the Re-stamp button. Off by default: the endpoint returns 404 and the button is disabled. Only the exact value <code>true</code> counts.</td></tr>
+          <tr><td><code>SCRAPE_BACKEND=github</code></td><td>API env</td><td>Step 4 starts the GitHub workflow instead of using the queue. Unset means BullMQ, which needs <code>REDIS_URL</code> and a running worker.</td></tr>
+          <tr><td><code>GITHUB_REPO</code>, <code>GITHUB_DISPATCH_TOKEN</code></td><td>API env</td><td>Which repo's workflow to start, and a token allowed to run it.</td></tr>
+          <tr><td><code>DATABASE_URL</code>, <code>CREDENTIAL_ENCRYPTION_KEY</code></td><td>GitHub repo secrets</td><td>Lets the runner read Postgres and decrypt library logins. Use the external database URL, and the same key as the API.</td></tr>
+          <tr><td><code>SCHEDULED_HOUSEHOLD_IDS</code></td><td>GitHub repo variable</td><td>Comma-separated household IDs for the nightly run. Empty means no nightly scrapes.</td></tr>
+          <tr><td><code>.env.admin</code></td><td>Your laptop, gitignored</td><td>Database URL and key for the local admin page. Independent of everything above.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- FAILURES -->
+  <section>
+    <div>
+      <h2>When something goes wrong</h2>
+      <p class="sub">What ends up in the run row, and what the person at the frontend sees.</p>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Situation</th><th>Run row</th><th>What happens</th></tr></thead>
+        <tbody>
+          <tr><td>Flag is off</td><td><span class="pill">none created</span></td><td>Re-stamp is disabled. A direct call gets a 404 before any row exists.</td></tr>
+          <tr><td>GitHub rejects the dispatch (bad token, wrong repo)</td><td><span class="pill bad">failed</span></td><td>Marked failed straight away, the client gets a 502, and the real error is only in the API log.</td></tr>
+          <tr><td>Runner fails before the script starts (for example, install)</td><td><span class="pill">stays running</span></td><td>Nothing updates the row. The frontend gives up after 3 minutes with “Still working…”.</td></tr>
+          <tr><td>Library site blocks GitHub's IPs or rejects the login</td><td><span class="pill bad">failed</span></td><td>Error is stored on the row. Existing checkouts are untouched.</td></tr>
+          <tr><td>Scraper reports errors, even partial ones</td><td><span class="pill bad">failed</span></td><td>Nothing is written, so a half-loaded page can't mark real checkouts as returned.</td></tr>
+          <tr><td>Second click while one is already waiting</td><td><span class="pill">older stays running</span></td><td>GitHub keeps one waiting run per account, so the older request is dropped and its row waits out the 3 minutes.</td></tr>
+          <tr><td>Local admin page used while the GitHub backend is on</td><td><span class="pill">can double up</span></td><td>“Run requested refreshes” would scrape a request the workflow is also about to handle. Use one at a time.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+</main>
+</body>
+</html>
