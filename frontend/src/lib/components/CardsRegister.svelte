@@ -4,6 +4,7 @@
 	import CatalogTabs from './CatalogTabs.svelte';
 	import LibraryPicker from './LibraryPicker.svelte';
 	import PaperCard from './PaperCard.svelte';
+	import RevealToggle from './RevealToggle.svelte';
 
 	/**
 	 * @type {{
@@ -35,6 +36,7 @@
 	let libraryId = $state('');
 	let cardNumber = $state('');
 	let pin = $state('');
+	let showPin = $state(false);
 	let displayName = $state('');
 	/** @type {HTMLFormElement | undefined} */
 	let form = $state();
@@ -63,6 +65,7 @@
 	function closeForm() {
 		adding = false;
 		cardNumber = pin = displayName = '';
+		showPin = false;
 	}
 
 	onMount(() => {
@@ -242,16 +245,21 @@
 						<label class="lbl" for="{id}-num">Card number</label>
 					</div>
 					<div class="cell c-pin">
-						<input
-							id="{id}-pin"
-							class="pin"
-							type="password"
-							bind:value={pin}
-							placeholder="••••"
-							autocomplete="off"
-							required
-							disabled={filing}
-						/>
+						<div class="pw">
+							<input
+								id="{id}-pin"
+								class="pin"
+								type={showPin ? 'text' : 'password'}
+								bind:value={pin}
+								placeholder="••••"
+								autocomplete="off"
+								autocapitalize="off"
+								spellcheck="false"
+								required
+								disabled={filing}
+							/>
+							<RevealToggle bind:revealed={showPin} label="PIN" disabled={filing} />
+						</div>
 						<label class="lbl" for="{id}-pin">PIN</label>
 					</div>
 					<div class="cell c-who">
@@ -308,7 +316,7 @@
 
 <style>
 	.register {
-		--cols: minmax(0, 1.5fr) minmax(0, 1.4fr) minmax(0, 0.75fr) minmax(0, 1.1fr);
+		--cols: minmax(0, 1.3fr) minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1.1fr);
 		width: 100%;
 		max-width: 760px;
 		font-family: var(--dd-font-text);
@@ -599,7 +607,12 @@
 	}
 
 	.add input.pin {
+		padding-right: 28px; /* clear of the eyeball */
 		letter-spacing: 0.2em;
+	}
+
+	.pw {
+		position: relative;
 	}
 
 	/* printed labels: the column heads do this job on wide screens, so hide them visually there */
