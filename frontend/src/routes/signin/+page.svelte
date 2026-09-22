@@ -2,11 +2,12 @@
 	import { goto } from '$app/navigation';
 	import { ApiError, api } from '$lib/api.js';
 	import SignInCard from '$lib/components/SignInCard.svelte';
+	import { signInWithGoogle } from '$lib/google.js';
 	import { setSession } from '$lib/session.js';
 
 	/** @type {'signin' | 'create'} */
 	let tab = $state('signin');
-	/** @type {'demo' | 'login' | 'register' | null} */
+	/** @type {'demo' | 'login' | 'register' | 'google' | null} */
 	let busy = $state(null);
 	/** @type {string | null} */
 	let error = $state(null);
@@ -18,8 +19,7 @@
 	}
 
 	// Demo, register and email login are wired up. Demo and register get a household back with the
-	// token; /auth/login returns only a token, so login follows up with GET /me. Google sign-in
-	// (/auth/google) is the same shape as login but isn't hooked to a button yet.
+	// token; /auth/login and /auth/google return only a token, so both follow up with GET /me.
 	async function tryDemo() {
 		busy = 'demo';
 		error = null;
@@ -35,19 +35,40 @@
 		}
 	}
 
+	// Shared by /auth/login and /auth/google: both hand back only a token, so the household
+	// to sign into comes from a follow-up GET /me.
+	/** @param {string} token */
+	async function establishSession(token) {
+		const { households } = await api('/me', { token });
+		// A user can belong to several households but the app shows one; take the oldest,
+		// which is the one they created at sign-up.
+		const household = households[0];
+		if (!household) throw new Error("This account doesn't belong to a household yet.");
+		setSession({ token, householdId: household.id, householdName: household.name, demo: false });
+		await goto('/');
+	}
+
 	/** @param {{ email: string, password: string }} body */
 	async function login(body) {
 		busy = 'login';
 		error = null;
 		try {
 			const { token } = await api('/auth/login', { method: 'POST', body });
-			const { households } = await api('/me', { token });
-			// A user can belong to several households but the app shows one; take the oldest,
-			// which is the one they created at sign-up.
-			const household = households[0];
-			if (!household) throw new Error("This account doesn't belong to a household yet.");
-			setSession({ token, householdId: household.id, householdName: household.name, demo: false });
-			await goto('/');
+			await establishSession(token);
+		} catch (e) {
+			error = e instanceof Error ? e.message : 'Something went wrong';
+		} finally {
+			busy = null;
+		}
+	}
+
+	async function loginWithGoogle() {
+		busy = 'google';
+		error = null;
+		try {
+			const idToken = await signInWithGoogle();
+			const { token } = await api('/auth/google', { method: 'POST', body: { idToken } });
+			await establishSession(token);
 		} catch (e) {
 			error = e instanceof Error ? e.message : 'Something went wrong';
 		} finally {
@@ -85,6 +106,7 @@
 	onDemo={tryDemo}
 	onLogin={login}
 	onRegister={register}
+	onGoogle={loginWithGoogle}
 	{busy}
 	{error}
 />

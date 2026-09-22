@@ -70,12 +70,12 @@
 	const selectedName = $derived(selectedAccount?.name);
 	// The card belongs to whoever's tab is open; the household's holder line is for "All".
 	const shownHolder = $derived(selectedAccount && holderFor ? holderFor(selectedAccount) : holder);
-	// "Cards" isn't a filter: it leaves for the register, so `selected` never becomes it.
+	// "Set up" isn't a filter: it leaves for the register, so `selected` never becomes it.
 	const CARDS = 'cards';
 	const tabs = $derived([
 		{ id: ALL, label: 'All' },
 		...accounts.map((a) => ({ id: a.id, label: a.name })),
-		...(onManageCards ? [{ id: CARDS, label: 'Cards', end: true }] : [])
+		...(onManageCards ? [{ id: CARDS, label: 'Set up', end: true }] : [])
 	]);
 
 	/** @param {string} id */
