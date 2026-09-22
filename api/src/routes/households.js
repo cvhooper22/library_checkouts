@@ -34,6 +34,21 @@ router.get('/:id/accounts', requireHouseholdMember, async (req, res) => {
   res.json({ accounts });
 });
 
+// Renames the household. Any member can do this, same as the other household routes —
+// there's no separate "owner-only" tier of action yet.
+router.patch('/:id', requireHouseholdMember, async (req, res) => {
+  const name = req.body?.name?.trim();
+  if (!name) {
+    throw new HttpError(400, 'name is required');
+  }
+
+  const household = await prisma.household.update({
+    where: { id: req.params.id },
+    data: { name },
+  });
+  res.json({ household: { id: household.id, name: household.name } });
+});
+
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 // Adds a library account to the household. Credentials are encrypted here and

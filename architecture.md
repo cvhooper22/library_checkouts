@@ -200,6 +200,7 @@ Small Express/Fastify service. Token-based auth from day one (not cookie/session
 | `GET` | `/households/:id/runs?ids=a,b,c` | Poll endpoint for the frontend "refreshing…" UI — status of specific runs (the `run_id`s from `/refresh`), one request for any number of cards. Only runs of the household's own accounts are returned; ids from elsewhere come back missing. Up to 100 ids; no `raw_output` |
 | `GET` | `/households/:id/accounts` | The library accounts (cards) in a household, with their library and last run status — never credentials |
 | `POST` | `/households/:id/accounts` | Add a new library account to a household. Body: `displayName`, `libraryId`, `credentials` (`username`, `pin`). The scraper type and its config (`baseUrl`) are filled in from the `libraries` row, not sent by the client; credentials are encrypted before storage |
+| `PATCH` | `/households/:id` | Renames a household. Body: `name`. Any member can do this, not just the owner |
 
 Notes:
 - `/refresh` returns immediately with a `run_id`; the frontend polls `/households/:id/runs?ids=…` with the `run_id`s it was given rather than blocking on the scrape.

@@ -10,22 +10,26 @@
 	 * @type {{
 	 *   accounts: import('$lib/cards.js').CardAccount[],
 	 *   libraries: import('$lib/cards.js').Library[],
+	 *   householdName: string,
 	 *   readOnly?: boolean,
 	 *   startOpen?: boolean,
 	 *   error?: string | null,
 	 *   onAdd: (card: import('$lib/cards.js').NewCard) => Promise<boolean>,
 	 *   onRemove: (accountId: string) => Promise<string | null>,
+	 *   onRenameHousehold: (name: string) => Promise<string | null>,
 	 *   onCheckouts: () => void
 	 * }}
 	 */
 	let {
 		accounts,
 		libraries,
+		householdName,
 		readOnly = false,
 		startOpen = false,
 		error = null,
 		onAdd,
 		onRemove,
+		onRenameHousehold,
 		onCheckouts
 	} = $props();
 
@@ -49,9 +53,16 @@
 	/** @type {string | null} */
 	let removeError = $state(null);
 
+	// Renaming the household: a name field that opens into an inline form, like the "add a card" line.
+	let editingName = $state(false);
+	let nameInput = $state('');
+	let savingName = $state(false);
+	/** @type {string | null} */
+	let nameError = $state(null);
+
 	const tabs = [
 		{ id: 'checkouts', label: 'Checkouts' },
-		{ id: 'cards', label: 'Cards', end: true }
+		{ id: 'cards', label: 'Set up', end: true }
 	];
 
 	async function openForm() {
@@ -66,6 +77,35 @@
 		adding = false;
 		cardNumber = pin = displayName = '';
 		showPin = false;
+	}
+
+	function startEditName() {
+		if (readOnly) return;
+		nameInput = householdName;
+		nameError = null;
+		editingName = true;
+	}
+
+	function cancelEditName() {
+		if (savingName) return;
+		editingName = false;
+		nameError = null;
+	}
+
+	/** @param {SubmitEvent} e */
+	async function saveName(e) {
+		e.preventDefault();
+		const trimmed = nameInput.trim();
+		if (!trimmed || savingName) return;
+		savingName = true;
+		nameError = null;
+		try {
+			const err = await onRenameHousehold(trimmed);
+			if (err) nameError = err;
+			else editingName = false;
+		} finally {
+			savingName = false;
+		}
 	}
 
 	onMount(() => {
@@ -147,6 +187,45 @@
 			</div>
 			<span class="form-no">Form<br />2·B</span>
 		</header>
+
+		<div class="household">
+			{#if editingName}
+				<form class="household-form" onsubmit={saveName}>
+					<div class="field">
+						<input
+							id="{id}-household-name"
+							type="text"
+							bind:value={nameInput}
+							autocomplete="off"
+							required
+							disabled={savingName}
+						/>
+						<label for="{id}-household-name">Household name</label>
+					</div>
+					<div class="household-actions">
+						<button class="file" type="submit" disabled={savingName || !nameInput.trim()}>
+							{savingName ? 'Saving…' : 'Save'}
+						</button>
+						<button class="cancel" type="button" onclick={cancelEditName} disabled={savingName}>
+							Cancel
+						</button>
+					</div>
+					{#if nameError}
+						<p class="error" role="alert">{nameError}</p>
+					{/if}
+				</form>
+			{:else}
+				<div class="field">
+					<div class="field-row">
+						<div class="field-value">{householdName}</div>
+						{#if !readOnly}
+							<button class="link rename" type="button" onclick={startEditName}>Rename</button>
+						{/if}
+					</div>
+					<div class="field-label">Household name</div>
+				</div>
+			{/if}
+		</div>
 
 		<div class="grid">
 			<div class="row colheads" aria-hidden="true">
@@ -355,6 +434,94 @@
 		text-align: right;
 		text-transform: uppercase;
 		color: var(--dd-ink-call);
+	}
+
+	/* ---------- household name ---------- */
+	.household {
+		padding: 0 var(--dd-gutter) var(--dd-space-6);
+	}
+
+	.household .field-row {
+		display: flex;
+		align-items: baseline;
+		justify-content: space-between;
+		gap: var(--dd-space-4) var(--dd-space-6);
+	}
+
+	.household .field-value {
+		flex: 1;
+		min-width: 0;
+		padding-bottom: var(--dd-space-1);
+		border-bottom: 1px solid var(--dd-rule);
+		font: 600 var(--dd-text-title) / 1.2 var(--dd-font-display);
+		letter-spacing: var(--dd-track-title);
+		color: var(--dd-ink);
+	}
+
+	.household .rename {
+		flex: none;
+	}
+
+	.household .field-label {
+		margin-top: var(--dd-space-1);
+		font-size: var(--dd-text-label);
+		font-weight: 700;
+		letter-spacing: var(--dd-track-label);
+		text-transform: uppercase;
+		color: var(--dd-ink-label);
+	}
+
+	.household-form {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: flex-end;
+		gap: var(--dd-space-5) var(--dd-space-6);
+		width: 100%;
+	}
+
+	.household-form .field {
+		flex: 1 1 220px;
+		min-width: 0;
+	}
+
+	.household-form input {
+		display: block;
+		width: 100%;
+		margin: 0;
+		padding: 0 0 var(--dd-space-1);
+		border: none;
+		border-bottom: 1px solid var(--dd-rule-input);
+		border-radius: 0;
+		background: transparent;
+		font: var(--dd-text-input) / 1.3 var(--dd-font-text);
+		color: var(--dd-ink);
+	}
+
+	.household-form input:focus {
+		outline: none;
+		padding-bottom: calc(var(--dd-space-1) - 1px);
+		border-bottom: 2px solid var(--dd-stamp);
+	}
+
+	.household-form input:disabled {
+		opacity: 0.6;
+	}
+
+	.household-form label {
+		display: block;
+		margin-top: var(--dd-space-1);
+		font-size: var(--dd-text-label);
+		font-weight: 700;
+		letter-spacing: var(--dd-track-label);
+		text-transform: uppercase;
+		color: var(--dd-ink-label);
+	}
+
+	.household-actions {
+		display: flex;
+		align-items: center;
+		gap: var(--dd-space-5);
+		flex: none;
 	}
 
 	/* ---------- the ruled register ---------- */
