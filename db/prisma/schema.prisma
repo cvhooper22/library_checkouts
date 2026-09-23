@@ -16,6 +16,7 @@ model User {
 
   ownedHouseholds  Household[]        @relation("HouseholdOwner")
   householdMembers HouseholdMember[]
+  calendarLinks    CalendarLink[]
 
   @@map("users")
 }
@@ -30,6 +31,8 @@ model Household {
   owner   User              @relation("HouseholdOwner", fields: [ownerUserId], references: [id])
   members HouseholdMember[]
   accounts Account[]
+  calendarLink        CalendarLink?
+  calendarRevocations CalendarRevocation[]
 
   @@map("households")
 }
@@ -117,4 +120,47 @@ model Checkout {
 
   @@unique([accountId, externalId])
   @@map("checkouts")
+}
+
+// A household's Google Calendar, connected through one member's OAuth grant: the
+// sync writes a single due-date reminder event to `calendarId` as that user. Only
+// `connectedUserId` may change or disconnect it. The refresh token is encrypted
+// like account credentials and only ever decrypted in the worker.
+model CalendarLink {
+  id                    String    @id @default(uuid()) @db.Uuid
+  householdId           String    @unique @map("household_id") @db.Uuid
+  connectedUserId       String    @map("connected_user_id") @db.Uuid
+  refreshTokenEncrypted String    @map("refresh_token_encrypted")
+  calendarId            String    @map("calendar_id")
+  reminderTime          Int       @default(480) @map("reminder_time") // minutes after midnight in timeZone
+  timeZone              String    @map("time_zone") // IANA, e.g. America/Los_Angeles
+  showTitles            Boolean   @default(true) @map("show_titles")
+  enabled               Boolean   @default(true)
+  lastSyncedAt          DateTime? @map("last_synced_at") @db.Timestamptz
+  lastError             String?   @map("last_error")
+  createdAt             DateTime  @default(now()) @map("created_at") @db.Timestamptz
+
+  household     Household @relation(fields: [householdId], references: [id])
+  connectedUser User      @relation(fields: [connectedUserId], references: [id])
+
+  @@map("calendar_links")
+}
+
+// A disconnect waiting on the worker. Disconnecting deletes the CalendarLink row at
+// once (so the household can reconnect right away) and queues this, because revoking
+// needs the decrypted token and only the worker decrypts. The worker deletes the
+// event, the calendar too if asked, revokes the grant, then deletes this row.
+model CalendarRevocation {
+  id                    String   @id @default(uuid()) @db.Uuid
+  householdId           String   @map("household_id") @db.Uuid
+  refreshTokenEncrypted String   @map("refresh_token_encrypted")
+  calendarId            String   @map("calendar_id")
+  eventId               String   @map("event_id")
+  deleteCalendar        Boolean  @default(false) @map("delete_calendar")
+  requestedAt           DateTime @default(now()) @map("requested_at") @db.Timestamptz
+  lastError             String?  @map("last_error")
+
+  household Household @relation(fields: [householdId], references: [id])
+
+  @@map("calendar_revocations")
 }
