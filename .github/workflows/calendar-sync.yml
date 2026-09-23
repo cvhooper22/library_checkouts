@@ -1,0 +1,48 @@
+# Syncs Google Calendar reminders on GitHub's runners instead of a BullMQ worker.
+#   - workflow_dispatch: one household, triggered by the API (enqueueCalendarSync in
+#     api/src/queue.js) after a calendar connect, settings change or disconnect when it runs
+#     with SCRAPE_BACKEND=github. Leave householdId empty to sync every household by hand.
+#   - schedule: every linked household, early each morning. No scrape: this keeps an
+#     overdue reminder moving forward to today (and back to the reminder time) on days
+#     nothing gets scraped. It runs before the reminder times it sets.
+# Both run worker/scripts/sync-calendars.js, and then carry out queued disconnects. GitHub
+# runs scheduled workflows late under load, only from the default branch, and pauses them
+# after 60 days without repo activity.
+name: calendar-sync
+
+on:
+  workflow_dispatch:
+    inputs:
+      householdId: { required: false, description: Household to sync (empty = all) }
+  schedule:
+    - cron: "0 12 * * *" # UTC: 5am PDT / 4am PST, ahead of the 8am default reminder and the 6am PDT scrape
+
+# Per-household, so two quick settings changes never write one calendar at once. GitHub keeps
+# only one waiting run per group; the newest request replaces an older waiting one, which is
+# fine here since every sync writes the household's current state.
+concurrency:
+  group: calendar-sync-${{ inputs.householdId || 'all' }}
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      CREDENTIAL_ENCRYPTION_KEY: ${{ secrets.CREDENTIAL_ENCRYPTION_KEY }}
+      GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+      GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+      NODE_ENV: production
+      PUPPETEER_SKIP_DOWNLOAD: "true" # a worker dependency; no browser is needed to sync
+      # Inputs go through env, never interpolated into a shell command.
+      HOUSEHOLD_ID: ${{ inputs.householdId }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: "**/package-lock.json"
+      - run: cd db && npm ci --include=dev && npx prisma generate
+      - run: cd worker && npm ci --omit=dev
+      - run: node worker/scripts/sync-calendars.js

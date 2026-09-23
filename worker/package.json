@@ -11,6 +11,8 @@
     "reseed-demo": "node scripts/reseed-demo.js",
     "seed-test-fixtures": "node scripts/seed-test-fixtures.js",
     "scrape-local": "node scripts/scrape-local.js",
+    "sync-calendars": "node scripts/sync-calendars.js",
+    "sync-calendars:dev": "node --env-file=.env scripts/sync-calendars.js",
     "admin": "node --env-file=.env.admin admin/server.js",
     "test": "node --test test/*.test.js"
   },
