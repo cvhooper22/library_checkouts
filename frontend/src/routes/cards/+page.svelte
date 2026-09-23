@@ -1,6 +1,8 @@
 <script>
 	import { goto, invalidateAll } from '$app/navigation';
 	import { ApiError, api } from '$lib/api.js';
+	import { startConnect } from '$lib/calendar.js';
+	import CalendarSection from '$lib/components/CalendarSection.svelte';
 	import CardsRegister from '$lib/components/CardsRegister.svelte';
 	import { clearSession, setSession } from '$lib/session.js';
 
@@ -86,7 +88,56 @@
 			return e instanceof Error ? e.message : 'Something went wrong';
 		}
 	}
+
+	/**
+	 * Runs one calendar action. Same contract as the register's: an error message, or null
+	 * once it's done (an expired sign-in goes back to /signin instead).
+	 * @param {() => Promise<unknown>} action
+	 * @returns {Promise<string | null>}
+	 */
+	async function calendarAction(action) {
+		try {
+			await action();
+			return null;
+		} catch (e) {
+			if (e instanceof ApiError && e.status === 401) {
+				clearSession();
+				await goto('/signin');
+				return null;
+			}
+			return e instanceof Error ? e.message : 'Something went wrong';
+		}
+	}
+
+	const calendarPath = () => `/households/${data.session.householdId}/calendar`;
+
+	// Leaves for Google on success; /calendar/callback brings the user back here.
+	const connectCalendar = () => calendarAction(() => startConnect(data.session));
+
+	/** @param {{ reminderTime?: number, timeZone?: string, showTitles?: boolean }} changes */
+	const saveCalendar = (changes) =>
+		calendarAction(async () => {
+			await api(calendarPath(), { method: 'PATCH', token: data.session.token, body: changes });
+			await invalidateAll();
+		});
+
+	/** @param {boolean} deleteCalendar */
+	const disconnectCalendar = (deleteCalendar) =>
+		calendarAction(async () => {
+			await api(`${calendarPath()}?deleteCalendar=${deleteCalendar}`, { method: 'DELETE', token: data.session.token });
+			await goto('/cards?calendar=disconnected', { invalidateAll: true, replaceState: true });
+		});
 </script>
+
+{#snippet calendar()}
+	<CalendarSection
+		calendar={data.calendar}
+		notice={data.calendarNotice}
+		onConnect={connectCalendar}
+		onSave={saveCalendar}
+		onDisconnect={disconnectCalendar}
+	/>
+{/snippet}
 
 <CardsRegister
 	accounts={data.accounts}
@@ -99,4 +150,5 @@
 	onRemove={removeCard}
 	onRenameHousehold={renameHousehold}
 	onCheckouts={() => goto('/')}
+	calendar={data.showCalendar ? calendar : undefined}
 />
