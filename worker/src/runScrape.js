@@ -3,6 +3,7 @@ const { getScraper } = require('./scrapers');
 const { validateScrapeResult } = require('./scrapers/validate');
 const { decryptCredentials } = require('./crypto');
 const { captureDebugArtifacts } = require('./debugArtifacts');
+const { syncHouseholdCalendar } = require('./calendarSync');
 
 const SCRAPER_VERSION = process.env.SCRAPER_VERSION || 'dev';
 
@@ -114,6 +115,16 @@ async function runScrape({ accountId, runId }) {
     });
 
     throw error; // rethrow so BullMQ's retry policy applies (the admin page just reports it)
+  }
+
+  // Fresh checkouts can move the household's calendar reminder. Outside the try above on
+  // purpose: the scrape already succeeded, so a calendar failure must never mark it
+  // failed or trigger a retry. It's recorded on the link (lastError) for the settings
+  // card, and a household with no linked calendar makes this a no-op.
+  try {
+    await syncHouseholdCalendar(account.householdId);
+  } catch (error) {
+    console.error(`[worker] calendar sync for household ${account.householdId} failed: ${error.message}`);
   }
 
   return { runId: run.id };

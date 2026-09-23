@@ -11,9 +11,11 @@
     "reseed-demo": "node scripts/reseed-demo.js",
     "seed-test-fixtures": "node scripts/seed-test-fixtures.js",
     "scrape-local": "node scripts/scrape-local.js",
-    "admin": "node --env-file=.env.admin admin/server.js"
+    "admin": "node --env-file=.env.admin admin/server.js",
+    "test": "node --test test/*.test.js"
   },
   "dependencies": {
+    "@googleapis/calendar": "^20.0.0",
     "@library-tracker/db": "file:../db",
     "ajv": "^8.20.0",
     "bcryptjs": "^2.4.3",
