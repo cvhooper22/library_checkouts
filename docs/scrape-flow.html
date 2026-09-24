@@ -418,6 +418,7 @@
           <tr><td><code>GITHUB_REPO</code>, <code>GITHUB_DISPATCH_TOKEN</code></td><td>API env</td><td>Which repo's workflow to start, and a token allowed to run it.</td></tr>
           <tr><td><code>DATABASE_URL</code>, <code>CREDENTIAL_ENCRYPTION_KEY</code></td><td>GitHub repo secrets</td><td>Lets the runner read Postgres and decrypt library logins. Use the external database URL, and the same key as the API.</td></tr>
           <tr><td><code>SCHEDULED_HOUSEHOLD_IDS</code></td><td>GitHub repo variable</td><td>Comma-separated household IDs for the nightly run. Empty means no nightly scrapes.</td></tr>
+          <tr><td><code>GOOGLE_CLIENT_ID</code>, <code>GOOGLE_CLIENT_SECRET</code></td><td>GitHub repo secrets</td><td>A finished scrape re-syncs its household's Google Calendar reminder, and <code>calendar-sync.yml</code> (daily, and on the API's request) syncs them without scraping. Same OAuth web client as the API. Unset only matters once a household has connected a calendar.</td></tr>
           <tr><td><code>.env.admin</code></td><td>Your laptop, gitignored</td><td>Database URL and key for the local admin page. Independent of everything above.</td></tr>
         </tbody>
       </table>

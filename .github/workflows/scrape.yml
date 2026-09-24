@@ -28,6 +28,9 @@ jobs:
     env:
       DATABASE_URL: ${{ secrets.DATABASE_URL }}
       CREDENTIAL_ENCRYPTION_KEY: ${{ secrets.CREDENTIAL_ENCRYPTION_KEY }}
+      # A finished scrape re-syncs its household's calendar reminder (runScrape.js).
+      GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+      GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
       NODE_ENV: production # keeps the test-* fixture scrapers unregistered
       SCRAPER_VERSION: github-${{ github.run_id }}
       PUPPETEER_SKIP_DOWNLOAD: "true" # runners already have Chrome

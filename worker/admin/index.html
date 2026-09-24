@@ -71,6 +71,16 @@
     <tbody id="accounts"></tbody>
   </table></div>
 
+  <h2>Calendar reminders</h2>
+  <div class="toolbar">
+    <button id="sync-calendars">Sync calendars</button>
+    <span id="calendar-activity" class="muted"></span>
+  </div>
+  <div class="card"><table>
+    <thead><tr><th>Household</th><th>Connected by</th><th>Reminder</th><th>Last synced</th><th>Status</th></tr></thead>
+    <tbody id="calendars"></tbody>
+  </table></div>
+
   <h2>Libraries</h2>
   <div class="card"><table>
     <thead><tr><th>Library</th><th>Scraper</th><th>Base URL</th><th>Accounts</th><th></th></tr></thead>
@@ -249,6 +259,60 @@
     $('runs').replaceChildren(...(rows.length ? rows : [el('tr', {}, el('td', { text: 'No runs yet.', className: 'empty' }))]));
   }
 
+  const clock = (minutes) => {
+    const h = Math.floor(minutes / 60);
+    return `${h % 12 || 12}:${String(minutes % 60).padStart(2, '0')} ${h < 12 ? 'AM' : 'PM'}`;
+  };
+
+  function renderCalendars() {
+    const { googleConfigured, syncing, lastSync, links, revocations } = state.calendars;
+
+    const button = $('sync-calendars');
+    button.textContent = syncing ? 'Syncing…' : 'Sync calendars';
+    button.disabled = syncing || !googleConfigured || (links.length === 0 && revocations.length === 0);
+    button.title = googleConfigured ? '' : 'Set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET in .env.admin, then restart';
+
+    const activity = $('calendar-activity');
+    if (!googleConfigured) {
+      activity.className = 'warn';
+      activity.textContent = 'GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET not set in .env.admin — syncing is off';
+    } else if (lastSync) {
+      activity.className = lastSync.error || lastSync.failed ? 'bad' : 'muted';
+      activity.textContent = lastSync.error
+        ? `last sync failed: ${lastSync.error}`
+        : `last sync ${fmt(lastSync.at)}: ${lastSync.links} household(s), ${lastSync.failed} failure(s)`;
+    } else {
+      activity.className = 'muted';
+      activity.textContent = 'every linked household, then queued disconnects';
+    }
+
+    const rows = links.map((link) => {
+      const status = !link.enabled
+        ? el('span', { text: 'expired — needs reconnect', className: 'bad' })
+        : link.lastError
+          ? el('span', { text: 'last sync failed', className: 'bad' })
+          : el('span', { text: link.lastSyncedAt ? 'ok' : 'waiting for first sync', className: link.lastSyncedAt ? 'ok' : 'warn' });
+      return el('tr', {},
+        cell(document.createTextNode(link.household.name)),
+        cell(document.createTextNode(link.connectedUser.email)),
+        cell(el('div', { text: clock(link.reminderTime) }),
+          el('div', { text: `${link.timeZone}${link.showTitles ? '' : ' · titles hidden'}`, className: 'muted' })),
+        cell(document.createTextNode(fmt(link.lastSyncedAt))),
+        cell(status, ...(link.lastError ? [el('div', { text: link.lastError, className: 'bad err' })] : [])));
+    });
+    // Disconnects the worker hasn't carried out yet: event (and maybe calendar) still there, grant not revoked.
+    for (const revocation of revocations) {
+      rows.push(el('tr', {},
+        cell(document.createTextNode(revocation.household.name)),
+        cell(el('span', { text: 'disconnected', className: 'muted' })),
+        cell(el('span', { text: revocation.deleteCalendar ? 'delete calendar too' : 'keep calendar', className: 'muted' })),
+        cell(document.createTextNode(`requested ${fmt(revocation.requestedAt)}`)),
+        cell(el('span', { text: 'waiting to revoke', className: 'warn' }),
+          ...(revocation.lastError ? [el('div', { text: revocation.lastError, className: 'bad err' })] : []))));
+    }
+    $('calendars').replaceChildren(...(rows.length ? rows : [el('tr', {}, el('td', { text: 'No household has connected a calendar.', className: 'empty' }))]));
+  }
+
   function render() {
     const { db, accounts } = state;
     const badge = $('db');
@@ -262,6 +326,7 @@
     $('run-requested').disabled = requested === 0;
     $('run-all').disabled = accounts.length === 0;
     renderAccounts();
+    renderCalendars();
     renderLibraries();
     renderRuns();
   }
@@ -280,6 +345,15 @@
   }
 
   $('run-requested').addEventListener('click', async () => { await post('/api/run-requested'); refresh(); });
+  $('sync-calendars').addEventListener('click', async () => {
+    const { links, revocations } = state.calendars;
+    if (!confirm(`Sync ${links.length} calendar(s) and carry out ${revocations.length} disconnect(s) against ${whichDb()}? This writes to people's Google Calendars.`)) return;
+    $('sync-calendars').disabled = true;
+    $('sync-calendars').textContent = 'Syncing…';
+    const { ok, body } = await post('/api/calendars/sync');
+    showBanner(ok ? '' : body.error || 'the calendar sync did not work');
+    refresh();
+  });
   $('run-all').addEventListener('click', async () => {
     if (!confirm(`Scrape all ${state.accounts.length} accounts against ${whichDb()}? They run one at a time.`)) return;
     await post('/api/run-all');

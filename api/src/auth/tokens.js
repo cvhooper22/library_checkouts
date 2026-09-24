@@ -1,3 +1,4 @@
+const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 
 const DEFAULT_EXPIRES_IN = '7d';
@@ -20,9 +21,35 @@ function signToken(userId, { demo = false, expiresIn } = {}) {
   });
 }
 
+// Only session tokens sign someone in. Other tokens signed with the same secret (the
+// calendar connect `state` below) carry a `purpose` and no `sub`, and are refused here so
+// one can never be replayed as a bearer token.
 function verifyToken(token) {
-  const { sub, demo } = jwt.verify(token, getSecret());
+  const { sub, demo, purpose } = jwt.verify(token, getSecret());
+  if (purpose !== undefined || typeof sub !== 'string') {
+    throw new Error('Not a session token');
+  }
   return { userId: sub, demo: demo === true };
 }
 
-module.exports = { signToken, verifyToken };
+const CALENDAR_STATE = 'calendar-connect';
+
+// The OAuth `state` for connecting a Google Calendar: which user started it, for which
+// household, good for 10 minutes. The random nonce makes each one unique, so the browser
+// can tell its own callback from anyone else's (routes/calendar.js).
+function signCalendarState({ userId, householdId }) {
+  const nonce = crypto.randomBytes(16).toString('base64url');
+  return jwt.sign({ purpose: CALENDAR_STATE, uid: userId, hid: householdId, nonce }, getSecret(), {
+    expiresIn: '10m',
+  });
+}
+
+function verifyCalendarState(token) {
+  const { purpose, uid, hid } = jwt.verify(token, getSecret());
+  if (purpose !== CALENDAR_STATE) {
+    throw new Error('Not a calendar connect state');
+  }
+  return { userId: uid, householdId: hid };
+}
+
+module.exports = { signToken, verifyToken, signCalendarState, verifyCalendarState };

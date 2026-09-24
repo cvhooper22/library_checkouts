@@ -1,4 +1,5 @@
-// Local-only admin page for running scrapes by hand (no Redis or BullMQ) and adding libraries.
+// Local-only admin page for running scrapes by hand (no Redis or BullMQ), adding libraries,
+// and syncing Google Calendar reminders.
 // Usage: copy .env.admin.example to .env.admin, fill it in, then `npm run admin`
 // and open http://127.0.0.1:4100.
 //
@@ -10,6 +11,7 @@ const fs = require('fs');
 const path = require('path');
 const prisma = require('@library-tracker/db');
 const { runScrape } = require('../src/runScrape');
+const { syncAllCalendars } = require('../src/calendarSync');
 const { REGISTRY } = require('../src/scrapers');
 
 const HOST = '127.0.0.1';
@@ -127,6 +129,33 @@ async function requestMany(accountIds) {
   return results;
 }
 
+// ---- Calendar reminders -----------------------------------------------------------
+// The same sync the daily calendar-sync.yml run does: every linked household, then the
+// queued disconnects. A scrape from this page already re-syncs its own household; this is
+// for syncing without scraping, and the only way here to carry out a disconnect.
+
+const googleConfigured = () => Boolean(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET);
+
+let calendarSyncing = false;
+let lastCalendarSync = null; // { links, failed, at } | { error, at }
+
+async function syncCalendars() {
+  if (!googleConfigured()) {
+    throw new BadRequest('GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET are not set (see .env.admin.example)');
+  }
+  if (calendarSyncing) throw new BadRequest('a calendar sync is already running', 409);
+  calendarSyncing = true;
+  try {
+    lastCalendarSync = { ...(await syncAllCalendars()), at: new Date() };
+  } catch (error) {
+    lastCalendarSync = { error: error.message, at: new Date() };
+    throw error;
+  } finally {
+    calendarSyncing = false;
+  }
+  return lastCalendarSync;
+}
+
 // ---- Libraries ------------------------------------------------------------------
 
 class BadRequest extends Error {
@@ -228,7 +257,7 @@ async function deleteLibrary(id) {
 // ---- Reads ----------------------------------------------------------------------
 
 async function getState() {
-  const [accounts, pending, runs, libraries] = await Promise.all([
+  const [accounts, pending, runs, libraries, calendarLinks, revocations] = await Promise.all([
     prisma.account.findMany({
       where: REAL_ACCOUNTS,
       // Explicit select: credentialsEncrypted must never leave this process.
@@ -272,6 +301,26 @@ async function getState() {
         accounts: { select: { deletedAt: true } },
       },
     }),
+    // Explicit selects: the encrypted Google tokens must never leave this process either.
+    prisma.calendarLink.findMany({
+      where: { household: { isDemo: false } },
+      orderBy: { household: { name: 'asc' } },
+      select: {
+        householdId: true,
+        reminderTime: true,
+        timeZone: true,
+        showTitles: true,
+        enabled: true,
+        lastSyncedAt: true,
+        lastError: true,
+        household: { select: { name: true } },
+        connectedUser: { select: { email: true } },
+      },
+    }),
+    prisma.calendarRevocation.findMany({
+      orderBy: { requestedAt: 'asc' },
+      select: { id: true, deleteCalendar: true, requestedAt: true, lastError: true, household: { select: { name: true } } },
+    }),
   ]);
 
   const pendingByAccount = new Map();
@@ -297,6 +346,13 @@ async function getState() {
       canDelete: accounts.length === 0,
     })),
     scraperTypes: LIBRARY_SCRAPER_TYPES,
+    calendars: {
+      googleConfigured: googleConfigured(),
+      syncing: calendarSyncing,
+      lastSync: lastCalendarSync,
+      links: calendarLinks,
+      revocations,
+    },
   };
 }
 
@@ -360,6 +416,9 @@ async function route(req, res) {
     if (pathname === '/api/run-requested') {
       const pending = await prisma.run.findMany({ where: pendingWhere(), select: { accountId: true }, distinct: ['accountId'] });
       return send(res, 202, await requestMany(pending.map((run) => run.accountId)));
+    }
+    if (pathname === '/api/calendars/sync') {
+      return send(res, 200, await syncCalendars());
     }
     if (pathname === '/api/run-all') {
       const accounts = await prisma.account.findMany({ where: REAL_ACCOUNTS, select: { id: true } });

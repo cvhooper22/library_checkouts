@@ -238,5 +238,5 @@ Notes:
 - ~~Finalize which encryption approach~~ Decided: AES-256-GCM via Node's built-in `crypto`, key from `CREDENTIAL_ENCRYPTION_KEY` — see `worker/src/crypto.js`.
 - Decide concurrency limits per worker instance for Puppeteer (memory-bound, ~512MB–1GB per concurrent scrape).
 - Design the "add a new library" onboarding flow for non-technical users (credential intake UI, which scraper gets assigned).
-- Notification system for upcoming due dates (email/push) — data model already supports it via `checkouts.due_date`, delivery mechanism not yet designed.
+- Email/push notifications for upcoming due dates. Google Calendar reminders exist (one event per household on the soonest due date, synced by `worker/src/calendarSync.js`); other channels are not yet designed.
 - Multi-tenant permission model beyond household — e.g. should a household admin be able to invite scraper-only contributors who never see other members' data.

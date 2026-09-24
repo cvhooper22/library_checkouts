@@ -9,6 +9,7 @@ const { HttpError } = require('./lib/errors');
 // these three exports and change what isEnabled reads: roadmap/feature-flags-db.md.
 const FLAGS = {
   refresh: 'REFRESH_ENABLED', // POST /accounts/:id/refresh, and the frontend's Re-stamp button
+  calendar: 'CALENDAR_ENABLED', // /households/:id/calendar, and the Set up page's calendar card
 };
 
 function isEnabled(flag) {

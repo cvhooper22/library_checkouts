@@ -462,7 +462,10 @@ DATABASE_URL="&lt;external-url&gt;?sslmode=require" npm run migrate:deploy</code
         <tr><td><code>NODE_ENV</code></td><td>All</td><td><code>production</code></td></tr>
         <tr><td><code>CORS_ORIGIN</code></td><td>API</td><td>Your frontend's URL (e.g. <code>https://your-frontend.onrender.com</code>, no trailing slash). Defaults to <code>*</code> (any origin) if unset, so set it to lock the API down. Set it once the static site has a URL.</td></tr>
         <tr><td><code>REFRESH_ENABLED</code></td><td>API</td><td>Feature flag for on-demand refresh (<code>POST /accounts/:id/refresh</code> and the frontend's Re-stamp button). <strong>Opt-in:</strong> leave it unset, or anything other than exactly <code>true</code>, and refresh is off — the endpoint returns 404 and the button is disabled. Set it to <code>true</code> once a worker (or a manual-run setup) is processing jobs. Changing it restarts the API; the frontend picks it up on the next page load, with no rebuild.</td></tr>
-        <tr><td><code>GOOGLE_CLIENT_ID</code></td><td>API (optional)</td><td>Only needed for Google sign-in — see below. If unset, <code>/auth/google</code> rejects every token.</td></tr>
+        <tr><td><code>GOOGLE_CLIENT_ID</code></td><td>API, Worker, calendar sync Cron Job (optional)</td><td>Needed for Google sign-in and Google Calendar reminders — see below. If unset, <code>/auth/google</code> rejects every token.</td></tr>
+        <tr><td><code>GOOGLE_CLIENT_SECRET</code></td><td>API, Worker, calendar sync Cron Job (optional)</td><td>Only for Google Calendar reminders — the same web client's secret. Secret: set it in the dashboard only.</td></tr>
+        <tr><td><code>GOOGLE_CALENDAR_REDIRECT_URI</code></td><td>API (optional)</td><td>Only for Google Calendar reminders: your frontend URL plus <code>/calendar/callback</code>, e.g. <code>https://your-frontend.onrender.com/calendar/callback</code>. Must match the client's authorized redirect URI exactly.</td></tr>
+        <tr><td><code>CALENDAR_ENABLED</code></td><td>API</td><td>Feature flag for Google Calendar reminders (<code>/households/:id/calendar</code> and the Set up page's calendar section). <strong>Opt-in</strong> like <code>REFRESH_ENABLED</code>: only exactly <code>true</code> turns it on.</td></tr>
         <tr><td><code>JWT_EXPIRES_IN</code></td><td>API (optional)</td><td>Token lifetime. Defaults to <code>7d</code>.</td></tr>
         <tr><td><code>VITE_API_URL</code></td><td>Frontend (static site)</td><td>The API's Render URL. Baked in at build time — see Phase 9.</td></tr>
       </table>
@@ -478,7 +481,19 @@ DATABASE_URL="&lt;external-url&gt;?sslmode=require" npm run migrate:deploy</code
         <li>Under <strong>Authorized JavaScript origins</strong>, add your local dev origin (e.g. <code>http://localhost:5173</code>) and your deployed frontend URL — no trailing slash or path.</li>
         <li>Copy the Client ID (<code>…apps.googleusercontent.com</code>) and set it as <code>GOOGLE_CLIENT_ID</code> on the API.</li>
       </ol>
-      <p>The Client ID isn't secret, and the Client Secret isn't needed (the API only verifies ID tokens). The frontend will need the same ID when the button is wired up, probably as a build-time <code>VITE_GOOGLE_CLIENT_ID</code>.</p>
+      <p>The Client ID isn't secret, and sign-in alone doesn't need the Client Secret (the API only verifies ID tokens). The frontend will need the same ID when the button is wired up, probably as a build-time <code>VITE_GOOGLE_CLIENT_ID</code>.</p>
+    </div>
+    <div class="step">
+      <h3>Google Calendar reminders (optional)</h3>
+      <p>A household member can connect their Google Calendar from the Set up page. The app creates a "Library Due Dates" calendar in their account and keeps one reminder event on it, on the soonest due date. It uses the same OAuth client as sign-in, plus its secret:</p>
+      <ol>
+        <li>In the same Cloud project, enable the <strong>Google Calendar API</strong> (APIs &amp; Services → Library).</li>
+        <li>Under <strong>Google Auth Platform → Data Access</strong>, add the scope <code>https://www.googleapis.com/auth/calendar.app.created</code>. It only reaches calendars the app itself creates, and Google rates it non-sensitive.</li>
+        <li>On the web client, add <strong>Authorized redirect URIs</strong> for <code>http://localhost:5173/calendar/callback</code> and your deployed frontend's <code>/calendar/callback</code>, and create a <strong>client secret</strong>.</li>
+        <li>While the app is in <strong>Testing</strong>, add each person who will connect as a test user. Testing-mode grants expire after 7 days; the Set up page then shows a "reconnect" message.</li>
+        <li>Set <code>GOOGLE_CLIENT_SECRET</code>, <code>GOOGLE_CALENDAR_REDIRECT_URI</code> and <code>CALENDAR_ENABLED=true</code> on the API, and <code>GOOGLE_CLIENT_ID</code> / <code>GOOGLE_CLIENT_SECRET</code> wherever calendars are synced (below).</li>
+      </ol>
+      <p>Calendars are written only by the worker side, never the API: after every scrape, after a settings change or disconnect, and once a day to keep overdue reminders on today. With the BullMQ setup, add a <strong>third Cron Job</strong> (root <code>worker</code>, command <code>npm run sync-calendars</code>, schedule <code>0 12 * * *</code> — about 5 AM Pacific, ahead of the default 8 AM reminder) with <code>DATABASE_URL</code>, <code>CREDENTIAL_ENCRYPTION_KEY</code>, <code>GOOGLE_CLIENT_ID</code> and <code>GOOGLE_CLIENT_SECRET</code>. With <code>SCRAPE_BACKEND=github</code>, <code>.github/workflows/calendar-sync.yml</code> does this instead: add <code>GOOGLE_CLIENT_ID</code> and <code>GOOGLE_CLIENT_SECRET</code> as repo secrets, and note that GitHub only dispatches workflows that exist on the default branch.</p>
     </div>
     <div class="step">
       <h3>Generate a credential encryption key and a JWT secret</h3>
@@ -580,6 +595,7 @@ curl -X POST https://api.yourdomain.com/accounts/&lt;demo-account-id&gt;/refresh
       <li>A <em>second</em>, independent Cron Job deployed for <code>reseed-demo.js</code> — never sharing a schedule or command with the enqueue cron</li>
       <li>Frontend deployed as a Static Site, pointed at the API URL</li>
       <li>Shared env vars (<code>DATABASE_URL</code>, <code>REDIS_URL</code>, encryption key, <code>JWT_SECRET</code>, <code>DEMO_MODE_ENABLED</code>) set on every relevant service</li>
+      <li>If using calendar reminders: Calendar API enabled, <code>calendar.app.created</code> scope and <code>/calendar/callback</code> redirect URIs on the client, Google env vars set, and a daily <code>sync-calendars</code> run (Cron Job or <code>calendar-sync.yml</code>)</li>
       <li>Custom domain attached to frontend and API, DNS verified, SSL live</li>
       <li>One account tested end-to-end: seed → refresh → worker logs → frontend display</li>
       <li>Demo mode tested: <code>/auth/demo</code> returns a token, checkouts load, and <code>/refresh</code> returns 403 for that token</li>

@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const authRoutes = require('./routes/auth');
 const householdRoutes = require('./routes/households');
+const calendarRoutes = require('./routes/calendar');
 const libraryRoutes = require('./routes/libraries');
 const accountRoutes = require('./routes/accounts');
 const meRoutes = require('./routes/me');
@@ -38,6 +39,7 @@ function createApp() {
   app.use('/me', meRoutes);
   app.use('/features', featureRoutes);
   app.use('/libraries', libraryRoutes);
+  app.use('/households/:id/calendar', calendarRoutes);
   app.use('/households', householdRoutes);
   app.use('/accounts', accountRoutes);
 
