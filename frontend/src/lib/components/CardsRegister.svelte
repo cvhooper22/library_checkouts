@@ -18,7 +18,7 @@
 	 *   onRemove: (accountId: string) => Promise<string | null>,
 	 *   onRenameHousehold: (name: string) => Promise<string | null>,
 	 *   onCheckouts: () => void,
-	 *   calendar?: import('svelte').Snippet
+	 *   sections?: import('svelte').Snippet
 	 * }}
 	 */
 	let {
@@ -32,7 +32,7 @@
 		onRemove,
 		onRenameHousehold,
 		onCheckouts,
-		calendar
+		sections
 	} = $props();
 
 	const id = $props.id();
@@ -380,8 +380,8 @@
 			{/if}
 		</div>
 
-		<!-- the page's third section, below the register (CalendarSection.svelte) -->
-		{@render calendar?.()}
+		<!-- the page's later sections, below the register (CalendarSection, SignInSection) -->
+		{@render sections?.()}
 
 		<footer class="foot">
 			<p class="foot-note">

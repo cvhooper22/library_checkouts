@@ -1,13 +1,13 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const rateLimit = require('express-rate-limit');
-const { OAuth2Client } = require('google-auth-library');
 const prisma = require('@library-tracker/db');
+const { verifyGoogleIdToken } = require('../auth/google');
 const { signToken } = require('../auth/tokens');
+const { normalizeEmail } = require('../lib/email');
 const { HttpError } = require('../lib/errors');
 
 const router = express.Router();
-const googleClient = new OAuth2Client();
 
 const BCRYPT_ROUNDS = 12;
 
@@ -25,7 +25,8 @@ const registerLimiter = rateLimit({
 // the user and a household they own (architecture.md's household onboarding flow
 // for non-owner contributors is still an open item, see §9).
 router.post('/register', registerLimiter, async (req, res) => {
-  const { email, password, householdName } = req.body || {};
+  const { password, householdName } = req.body || {};
+  const email = normalizeEmail(req.body?.email);
   if (!email || !password || !householdName) {
     throw new HttpError(400, 'email, password, and householdName are required');
   }
@@ -54,7 +55,8 @@ router.post('/register', registerLimiter, async (req, res) => {
 });
 
 router.post('/login', async (req, res) => {
-  const { email, password } = req.body || {};
+  const { password } = req.body || {};
+  const email = normalizeEmail(req.body?.email);
   if (!email || !password) {
     throw new HttpError(400, 'email and password are required');
   }
@@ -88,41 +90,19 @@ function createGoogleUser({ sub, email, given_name: givenName }) {
 }
 
 router.post('/google', async (req, res) => {
-  const { idToken } = req.body || {};
-  if (!idToken) {
-    throw new HttpError(400, 'idToken is required');
-  }
-
-  let payload;
-  try {
-    const ticket = await googleClient.verifyIdToken({
-      idToken,
-      audience: process.env.GOOGLE_CLIENT_ID,
-    });
-    payload = ticket.getPayload();
-  } catch {
-    throw new HttpError(401, 'Invalid Google token');
-  }
-
-  // Google itself attests this, so it's safe to tell the caller directly —
-  // they already hold a signed token proving they control this Google
-  // session, unlike an anonymous /login attempt where vagueness matters.
-  if (!payload.email_verified) {
-    throw new HttpError(
-      401,
-      "Your Google account's email isn't verified. Verify it with Google, then try again.",
-    );
-  }
+  const payload = await verifyGoogleIdToken(req.body?.idToken);
+  const email = normalizeEmail(payload.email);
 
   // `sub` is Google's stable per-account identifier; email is only used to
   // link a Google sign-in to an existing password account, since Google has
-  // already verified the caller owns that address.
+  // already verified the caller owns that address. A Google account with a
+  // different address links from Set up instead (POST /me/google).
   let user = await prisma.user.findUnique({ where: { googleId: payload.sub } });
   if (!user) {
-    const byEmail = await prisma.user.findUnique({ where: { email: payload.email } });
+    const byEmail = await prisma.user.findUnique({ where: { email } });
     user = byEmail
       ? await prisma.user.update({ where: { id: byEmail.id }, data: { googleId: payload.sub } })
-      : await createGoogleUser(payload);
+      : await createGoogleUser({ ...payload, email });
   }
 
   res.json({ token: signToken(user.id) });
