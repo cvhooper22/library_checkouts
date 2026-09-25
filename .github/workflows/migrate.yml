@@ -1,0 +1,36 @@
+# Applies pending Prisma migrations to the production database, since the API's free Render
+# plan has no pre-deploy command.
+#   - push: automatically when a change to db/prisma/migrations/ lands on main. It can finish
+#     a minute or two before Render deploys the matching code, which is fine for additive
+#     migrations. For one that drops or renames something, first deploy code that no longer
+#     uses it, then merge the migration in a later PR.
+#   - workflow_dispatch: the Run workflow button in the Actions tab, for reruns.
+# Uses the same DATABASE_URL secret (Render's external URL) as scrape.yml.
+name: migrate
+
+on:
+  push:
+    branches: [main]
+    paths: ["db/prisma/migrations/**"]
+  workflow_dispatch:
+
+# Never two migrate runs at once; a queued run waits instead of cancelling one mid-migration.
+concurrency:
+  group: migrate
+  cancel-in-progress: false
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: "**/package-lock.json"
+      - run: cd db && npm ci --include=dev
+      - run: cd db && npx prisma migrate deploy

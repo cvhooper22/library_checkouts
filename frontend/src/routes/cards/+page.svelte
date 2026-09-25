@@ -2,8 +2,11 @@
 	import { goto, invalidateAll } from '$app/navigation';
 	import { ApiError, api } from '$lib/api.js';
 	import { startConnect } from '$lib/calendar.js';
+	import { GOOGLE_CLIENT_ID } from '$lib/config.js';
+	import { signInWithGoogle } from '$lib/google.js';
 	import CalendarSection from '$lib/components/CalendarSection.svelte';
 	import CardsRegister from '$lib/components/CardsRegister.svelte';
+	import SignInSection from '$lib/components/SignInSection.svelte';
 	import { clearSession, setSession } from '$lib/session.js';
 
 	let { data } = $props();
@@ -90,12 +93,12 @@
 	}
 
 	/**
-	 * Runs one calendar action. Same contract as the register's: an error message, or null
+	 * Runs one Set up section action (calendar, sign-in). Same contract as the register’s: an error message, or null
 	 * once it's done (an expired sign-in goes back to /signin instead).
 	 * @param {() => Promise<unknown>} action
 	 * @returns {Promise<string | null>}
 	 */
-	async function calendarAction(action) {
+	async function sectionAction(action) {
 		try {
 			await action();
 			return null;
@@ -112,31 +115,58 @@
 	const calendarPath = () => `/households/${data.session.householdId}/calendar`;
 
 	// Leaves for Google on success; /calendar/callback brings the user back here.
-	const connectCalendar = () => calendarAction(() => startConnect(data.session));
+	const connectCalendar = () => sectionAction(() => startConnect(data.session));
 
 	/** @param {{ reminderTime?: number, timeZone?: string, showTitles?: boolean }} changes */
 	const saveCalendar = (changes) =>
-		calendarAction(async () => {
+		sectionAction(async () => {
 			await api(calendarPath(), { method: 'PATCH', token: data.session.token, body: changes });
 			await invalidateAll();
 		});
 
 	/** @param {boolean} deleteCalendar */
 	const disconnectCalendar = (deleteCalendar) =>
-		calendarAction(async () => {
+		sectionAction(async () => {
 			await api(`${calendarPath()}?deleteCalendar=${deleteCalendar}`, { method: 'DELETE', token: data.session.token });
 			await goto('/cards?calendar=disconnected', { invalidateAll: true, replaceState: true });
 		});
+
+	// Same error contract as the calendar’s. Google's prompt runs first, so a dismissed or
+	// blocked prompt comes back as its message without touching the API.
+	const linkGoogle = () =>
+		sectionAction(async () => {
+			const idToken = await signInWithGoogle();
+			await api('/me/google', { method: 'POST', token: data.session.token, body: { idToken } });
+			await invalidateAll();
+		});
+
+	const unlinkGoogle = () =>
+		sectionAction(async () => {
+			await api('/me/google', { method: 'DELETE', token: data.session.token });
+			await invalidateAll();
+		});
 </script>
 
-{#snippet calendar()}
-	<CalendarSection
-		calendar={data.calendar}
-		notice={data.calendarNotice}
-		onConnect={connectCalendar}
-		onSave={saveCalendar}
-		onDisconnect={disconnectCalendar}
-	/>
+{#snippet sections()}
+	{#if data.showCalendar}
+		<CalendarSection
+			calendar={data.calendar}
+			notice={data.calendarNotice}
+			onConnect={connectCalendar}
+			onSave={saveCalendar}
+			onDisconnect={disconnectCalendar}
+		/>
+	{/if}
+	{#if data.user}
+		<SignInSection
+			email={data.user.email}
+			hasPassword={data.user.hasPassword}
+			googleLinked={data.user.googleLinked}
+			googleAvailable={Boolean(GOOGLE_CLIENT_ID)}
+			onLink={linkGoogle}
+			onUnlink={unlinkGoogle}
+		/>
+	{/if}
 {/snippet}
 
 <CardsRegister
@@ -150,5 +180,5 @@
 	onRemove={removeCard}
 	onRenameHousehold={renameHousehold}
 	onCheckouts={() => goto('/')}
-	calendar={data.showCalendar ? calendar : undefined}
+	{sections}
 />

@@ -3,7 +3,7 @@
 	import { HALF_HOURS, formatMinutes, timeZones } from '$lib/calendar.js';
 
 	/**
-	 * The Set up page's third section: the household's Google Calendar reminder. Anyone can
+	 * The Set up page’s calendar section: the household's Google Calendar reminder. Anyone can
 	 * see it; only the member who connected can change or disconnect it (it's their Google
 	 * account), so everyone else gets the same facts read-only.
 	 * @type {{
