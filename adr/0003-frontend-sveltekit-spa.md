@@ -14,7 +14,7 @@ Accepted. Fills in the `frontend/` entry left as "not yet implemented" in `adr/0
 
 - **SvelteKit + Svelte 5 (runes), plain JavaScript with JSDoc types** checked by `svelte-check` — same language as `api/` and `worker/`, no TypeScript build step to own.
 - **`adapter-static` with `fallback: 'index.html'` and `ssr = false`** in the root layout. Auth is a client-held token against a separate API, so there is nothing to render server-side and no Node runtime to deploy. Output is `frontend/build/`.
-- **API location via `VITE_API_URL`** (`src/lib/config.js`), matching the deploy guide; defaults to `http://localhost:3000`.
+- **API location via `VITE_API_URL`** (`src/lib/config.js`), matching the deploy guide; defaults to `http://localhost:7776`.
 - **Design tokens live in `frontend/src/lib/styles/`** (`tokens.css`, `tokens.js`), copied from the handoff. The handoff copy is the source for design intent; the `frontend/` copy carries only JSDoc typing additions.
 
 ## Consequences

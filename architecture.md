@@ -66,7 +66,7 @@ Groups people who share a dashboard. Distinct from `accounts`, which are library
 | `id` | uuid, PK | |
 | `name` | text | e.g. "The Smiths" |
 | `owner_user_id` | uuid, FK → `users.id` | |
-| `is_demo` | boolean, default `false` | marks the one shared, read-only demo household — see adr/0002-demo-mode.md |
+| `is_demo` | boolean, default `false` | marks the one shared demo household, whose writes are simulated (adr/0004-capability-based-authorization.md) — see adr/0002-demo-mode.md |
 | `created_at` | timestamptz | |
 
 ### `household_members`
@@ -228,7 +228,7 @@ Notes:
 | Token-based auth, not sessions | Electron/mobile clients planned; stateless tokens avoid an auth rewrite later. |
 | Queue (BullMQ/Redis) between triggers and worker | Both cron and on-demand hit the same queue — avoids duplicate scrape logic and gives retries/concurrency control for free. |
 | Credentials encrypted at rest, decrypted only in worker memory | This system is explicitly planned to hold other people's library credentials eventually — worth taking seriously from v1. |
-| Demo mode: one shared, read-only household, never enqueued | A public, credential-less "Try it out" button must never be able to reach the shared BullMQ queue. The `demo` scraper is registered like any other but is only ever called in-process by a reseed script on its own schedule — never dispatched as a job. Read-only-ness is enforced by one global middleware keyed off a `demo` token claim, not per-handler checks. See adr/0002-demo-mode.md. |
+| Demo mode: one shared household whose writes are simulated, never enqueued | A public, credential-less "Try it out" button must never be able to reach the shared BullMQ queue. The `demo` scraper is registered like any other but is only ever called in-process by a reseed script on its own schedule — never dispatched as a job. Each write is allowed, simulated or denied by one global middleware keyed off a `demo` token claim, not per-handler checks. See adr/0002-demo-mode.md and adr/0004-capability-based-authorization.md. |
 | Scraper contract requires `externalId` per checkout | Title-only matching breaks across services with duplicate titles or re-issued due dates; a stable per-item ID (or `title + due_date` fallback) is the upsert key so "returned" detection works uniformly regardless of which scraper produced the row. |
 
 ---

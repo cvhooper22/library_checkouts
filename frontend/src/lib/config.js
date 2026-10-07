@@ -1,5 +1,5 @@
 /** Base URL of the Express API (api/). Set VITE_API_URL at build time; see .env.example. */
-export const API_URL = (import.meta.env.VITE_API_URL ?? 'http://localhost:3000').replace(/\/$/, '');
+export const API_URL = (import.meta.env.VITE_API_URL ?? 'http://localhost:7776').replace(/\/$/, '');
 
 /**
  * OAuth 2.0 Client ID from Google Cloud Console — must be the same one the API's

@@ -12,7 +12,7 @@ function getSecret() {
 }
 
 // `demo: true` marks a token minted by POST /auth/demo — it's what
-// demoReadOnly keys off of (adr/0002-demo-mode.md). Set only at issuance;
+// enforceCapabilities keys off of (adr/0004-capability-based-authorization.md). Set only at issuance;
 // nothing re-derives demo-ness from the DB on later requests.
 function signToken(userId, { demo = false, expiresIn } = {}) {
   const claims = demo ? { sub: userId, demo: true } : { sub: userId };

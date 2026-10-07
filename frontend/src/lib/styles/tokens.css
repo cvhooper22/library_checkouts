@@ -1,4 +1,4 @@
-/* Date Due — design tokens (whole look & feel)
+/* Bookstamp — design tokens (whole look & feel)
    Covers the checkouts card, the accounts card, and the sign-in form.
    Import once at the app root: `import './tokens.css'` in src/routes/+layout.svelte
    (or src/app.css). Theme by overriding on :root or any ancestor. */
@@ -16,7 +16,14 @@
   --dd-surface-sunk: #f6f1e7;       /* header band, quiet fill */
   --dd-panel: rgba(58, 80, 104, 0.05);   /* KPI block ground */
   --dd-panel-head: rgba(58, 80, 104, 0.06); /* ledger column-header band */
-  --dd-bloom: radial-gradient(120% 90% at 12% 0%, rgba(255, 251, 236, 0.85), transparent 60%);
+  /* bloom = highlight at the card's top-left. Parameters are unitless fractions of the card box so
+     the active tab can rebuild the same gradient in px (CatalogTabs) and blend into the card edge. */
+  --dd-bloom-cx: 0.12;
+  --dd-bloom-rx: 1.2;
+  --dd-bloom-ry: 0.9;
+  --dd-bloom-color: rgba(255, 251, 236, 0.85);
+  --dd-bloom-fade: 60%;
+  --dd-bloom: radial-gradient(calc(var(--dd-bloom-rx) * 100%) calc(var(--dd-bloom-ry) * 100%) at calc(var(--dd-bloom-cx) * 100%) 0%, var(--dd-bloom-color), transparent var(--dd-bloom-fade));
   --dd-age: radial-gradient(90% 70% at 100% 100%, rgba(150, 124, 74, 0.22), transparent 55%);
   --dd-patina: var(--dd-bloom), var(--dd-age); /* both, on one ::before */
   --dd-cover-hatch: repeating-linear-gradient(135deg, rgba(28, 26, 23, 0.1) 0 1px, transparent 1px 6px);

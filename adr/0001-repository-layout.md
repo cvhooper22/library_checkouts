@@ -51,12 +51,12 @@ library_checkouts/
 ├── api/                        # @library-tracker/api — Express, token auth (architecture.md §6)
 │   └── src/
 │       ├── index.js            # process entrypoint — listens on PORT
-│       ├── app.js              # createApp(): mounts /auth (public), then authenticate + demoReadOnly, then routes
+│       ├── app.js              # createApp(): mounts /auth (public), then authenticate + enforceCapabilities, then routes
 │       ├── crypto.js           # encrypt-only; duplicated from worker/src/crypto.js (independent packages, see this ADR)
 │       ├── queue.js            # BullMQ producer for POST /accounts/:id/refresh
 │       ├── auth/
 │       │   ├── tokens.js       # JWT sign/verify; carries the `demo` claim
-│       │   └── middleware.js   # authenticate, demoReadOnly (the single chokepoint enforcing demo-token read-only-ness), household/account membership checks
+│       │   └── middleware.js   # authenticate, household/account membership checks; the allow/simulate/deny decision for writes lives in capabilities.js + enforce.js (adr/0004)
 │       ├── lib/
 │       │   └── errors.js       # HttpError + the shared error handler
 │       └── routes/

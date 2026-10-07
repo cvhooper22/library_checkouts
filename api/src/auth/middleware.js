@@ -1,6 +1,7 @@
 const prisma = require('@library-tracker/db');
 const { verifyToken } = require('./tokens');
 const { HttpError } = require('../lib/errors');
+const { roleFor } = require('./capabilities');
 
 // Token-based auth per architecture.md §6 — not cookie/session, so a future
 // Electron/mobile client can hit these same endpoints. Express 5 forwards thrown
@@ -13,19 +14,9 @@ function authenticate(req, res, next) {
   }
   try {
     ({ userId: req.userId, demo: req.demo } = verifyToken(token));
+    req.role = roleFor(req);
   } catch {
     throw new HttpError(401, 'Invalid or expired token');
-  }
-  next();
-}
-
-// Single enforcement point for "demo mode is read-only" — see
-// adr/0002-demo-mode.md decision 6. Mounted once in app.js, right after
-// authenticate and ahead of every protected route, so a new mutating route is
-// safe by default; nothing per-handler needs to remember an isDemo check.
-function demoReadOnly(req, res, next) {
-  if (req.demo && req.method !== 'GET') {
-    throw new HttpError(403, 'The demo account is read-only.');
   }
   next();
 }
@@ -59,4 +50,4 @@ async function requireAccountAccess(req, res, next) {
   next();
 }
 
-module.exports = { authenticate, demoReadOnly, requireHouseholdMember, requireAccountAccess };
+module.exports = { authenticate, requireHouseholdMember, requireAccountAccess };

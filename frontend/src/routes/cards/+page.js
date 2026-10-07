@@ -14,19 +14,32 @@ export async function load({ url }) {
 	if (!session) redirect(307, '/signin');
 
 	try {
-		const [{ accounts }, { libraries }, { features }] = await Promise.all([
+		const [{ accounts }, { libraries }, { features }, { user, capabilities }] = await Promise.all([
 			api(`/households/${session.householdId}/accounts`, { token: session.token }),
 			api('/libraries', { token: session.token }),
 			// Fails closed: if the flags can't be read (e.g. an older API), optional features stay off.
-			api('/features', { token: session.token }).catch(() => ({ features: {} }))
+			api('/features', { token: session.token }).catch(() => ({ features: {} })),
+			api('/me', { token: session.token })
 		]);
-		// The demo household never connects a calendar, so it doesn't get the section at all.
-		const showCalendar = Boolean(features.calendar) && !session.demo;
+		// What the API will do with each write for this caller: allow, simulate (the demo) or deny.
+		const canConnectCalendar = capabilities['calendar.connect'] !== 'deny';
+		// The demo owner's sign-in methods aren't the visitor's to change, so no section for it.
+		const canLinkGoogle = capabilities['identity.link-google'] !== 'deny';
+		const showCalendar = Boolean(features.calendar);
 		const { calendar } = showCalendar
 			? await api(`/households/${session.householdId}/calendar`, { token: session.token })
 			: { calendar: null };
 		const notice = CALENDAR_NOTICES[/** @type {keyof typeof CALENDAR_NOTICES} */ (url.searchParams.get('calendar'))] ?? null;
-		return { accounts, libraries, session, showCalendar, calendar, calendarNotice: notice };
+		return {
+			accounts,
+			libraries,
+			session,
+			showCalendar,
+			canConnectCalendar,
+			calendar,
+			calendarNotice: notice,
+			user: canLinkGoogle ? user : null
+		};
 	} catch (e) {
 		if (!(e instanceof ApiError)) throw e;
 		// Expired or invalid token: back to sign-in.

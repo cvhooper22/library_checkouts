@@ -115,6 +115,23 @@ test('POST /auth/google links an existing password account by email', async (t) 
   });
 });
 
+test('POST /auth/google links by email regardless of case', async (t) => {
+  stub(t, OAuth2Client.prototype, 'verifyIdToken', async () => ({
+    getPayload: () => ({ ...GOOGLE_PAYLOAD, email: 'Reader@Example.com' }),
+  }));
+  const findUniqueCalls = stub(t, prisma.user, 'findUnique', async ({ where }) =>
+    where.googleId ? null : { id: 'user-3', email: GOOGLE_PAYLOAD.email, passwordHash: 'hash' },
+  );
+  stub(t, prisma.user, 'update', async () => ({ id: 'user-3' }));
+
+  await withServer(t, async (server) => {
+    const { status } = await postGoogle(server, { idToken: 'fake-id-token' });
+
+    assert.equal(status, 200);
+    assert.deepEqual(findUniqueCalls[1][0], { where: { email: 'reader@example.com' } });
+  });
+});
+
 test('POST /auth/google rejects an unverified email', async (t) => {
   stub(t, OAuth2Client.prototype, 'verifyIdToken', async () => ({
     getPayload: () => ({ ...GOOGLE_PAYLOAD, email_verified: false }),

@@ -3,6 +3,7 @@ const prisma = require('@library-tracker/db');
 const { requireHouseholdMember } = require('../auth/middleware');
 const { encryptCredentials } = require('../crypto');
 const { HttpError } = require('../lib/errors');
+const { UUID, parseHouseholdName, parseNewAccount, findAvailableLibrary } = require('../lib/inputs');
 
 const router = express.Router();
 
@@ -37,10 +38,7 @@ router.get('/:id/accounts', requireHouseholdMember, async (req, res) => {
 // Renames the household. Any member can do this, same as the other household routes —
 // there's no separate "owner-only" tier of action yet.
 router.patch('/:id', requireHouseholdMember, async (req, res) => {
-  const name = req.body?.name?.trim();
-  if (!name) {
-    throw new HttpError(400, 'name is required');
-  }
+  const name = parseHouseholdName(req.body);
 
   const household = await prisma.household.update({
     where: { id: req.params.id },
@@ -49,29 +47,13 @@ router.patch('/:id', requireHouseholdMember, async (req, res) => {
   res.json({ household: { id: household.id, name: household.name } });
 });
 
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
 // Adds a library account to the household. Credentials are encrypted here and
 // never stored or returned in plaintext (architecture.md §6). The scraper and its
 // per-library config come from the chosen `libraries` row, not the client — the
 // client only picks a library (GET /libraries) and supplies the login.
 router.post('/:id/accounts', requireHouseholdMember, async (req, res) => {
-  const { displayName, libraryId, credentials, scheduleCron } = req.body || {};
-  if (!displayName || !libraryId || !credentials?.username || !credentials?.pin) {
-    throw new HttpError(400, 'displayName, libraryId, and credentials (username, pin) are required');
-  }
-  // Checked up front: Postgres rejects a malformed uuid with an error that would surface as a 500.
-  if (!UUID.test(libraryId)) {
-    throw new HttpError(400, 'libraryId must be a library id from GET /libraries');
-  }
-
-  const library = await prisma.library.findUnique({ where: { id: libraryId } });
-  if (!library) {
-    throw new HttpError(404, 'Library not found');
-  }
-  if (!library.isActive) {
-    throw new HttpError(400, 'That library is not available');
-  }
+  const { displayName, libraryId, credentials, scheduleCron } = parseNewAccount(req.body);
+  const library = await findAvailableLibrary(libraryId);
 
   const account = await prisma.account.create({
     data: {

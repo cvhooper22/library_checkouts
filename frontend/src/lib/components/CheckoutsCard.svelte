@@ -1,4 +1,5 @@
 <script>
+	import Logo from '$lib/components/Logo.svelte';
 	import { dueState, kpiInk, stampVars, styleVars } from '$lib/styles/tokens.js';
 	import { bucketOf, pad2, pulledLabel } from '$lib/checkouts.js';
 	import { canReload, refreshLabel } from '$lib/refresh.js';
@@ -100,7 +101,7 @@
 	<PaperCard>
 		<header class="head">
 			<div class="head-top">
-				<span class="num">№{pad2(rows.length)}</span>
+				<Logo height="1.75rem" />
 				{#if shownHolder}
 					<div class="holder">
 						<div class="holder-label">Card holder</div>

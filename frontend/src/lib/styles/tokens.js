@@ -1,4 +1,4 @@
-// Date Due — tokens for logic (Svelte)
+// Bookstamp — tokens for logic (Svelte)
 // Styling should read the CSS custom properties from tokens.css.
 // These exports exist for the handful of values JS must compute:
 // stamp jitter, due-state tone, and any canvas/chart color.

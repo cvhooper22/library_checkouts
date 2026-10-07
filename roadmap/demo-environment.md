@@ -12,7 +12,7 @@ What's there and manually verified end-to-end against a local Postgres/Redis:
 - `worker/src/scrapers/demo.js` — synthetic scraper, registered in `REGISTRY`, but never dispatched via the queue
 - `worker/scripts/reseed-demo.js` — idempotent: creates the demo user/household/library/accounts on first run, full-replaces their `runs`/`checkouts` every run
 - `worker/src/enqueueDaily.js` — excludes accounts whose household is demo
-- `api/` — the demo layer on top of the Express API: JWT auth (`/auth/demo`, alongside `/auth/login`), a single `demoReadOnly` middleware chokepoint that 403s any non-`GET` request carrying a `demo: true` token claim, plus `/households/:id/checkouts`, `/accounts/:id/runs`, `/accounts/:id/status`, `/accounts/:id/refresh`, `/households/:id/accounts`
+- `api/` — the demo layer on top of the Express API: JWT auth (`/auth/demo`, alongside `/auth/login`), a single `enforceCapabilities` middleware (adr/0004) that allows, simulates or denies each write for a token carrying a `demo: true` claim, plus `/households/:id/checkouts`, `/accounts/:id/runs`, `/accounts/:id/status`, `/accounts/:id/refresh`, `/households/:id/accounts`
 - `adr/0002-demo-mode.md` — records the shared-household, read-only, never-enqueued design
 - `render-deployment-guide.html` — updated with a second, independent cron job (Phase 8) for the reseed script
 
@@ -60,7 +60,7 @@ the shared schema.
       deployment replaces it — don't carry it forward into prod's schema.
 - [ ] Provision a Neon project for demo; point `worker/scripts/reseed-demo.js`
       and the demo API's `DATABASE_URL` at it instead of Render Postgres.
-- [ ] Simplify `demoReadOnly` in `api/src/auth/middleware.js` to an unconditional
+- [ ] Simplify the demo role handling in `api/src/auth/enforce.js` to an unconditional
       env-driven `READ_ONLY_MODE` check — drop the `demo` JWT claim and the
       distinction between `/auth/login` and `/auth/demo` (the demo deployment
       only ever has one seeded user, so a no-credential login is the only

@@ -76,6 +76,30 @@ async function ensureDemoAccounts(householdId, libraryId) {
   return accounts;
 }
 
+// The "connected" Google Calendar card, so the demo shows what a live account's Set up page
+// shows. The calendar id and token are placeholders: the worker skips demo households
+// (calendarSync.js), the API never calls Google for them, and the demo role is denied
+// calendar.connect (adr/0004-capability-based-authorization.md), so nothing ever uses them.
+// lastSyncedAt moves forward on every reseed so it reads as recently synced.
+async function ensureDemoCalendar(householdId, userId) {
+  const lastSyncedAt = new Date();
+  await prisma.calendarLink.upsert({
+    where: { householdId },
+    update: { lastSyncedAt, lastError: null, enabled: true },
+    create: {
+      householdId,
+      connectedUserId: userId,
+      refreshTokenEncrypted: encryptCredentials({ refreshToken: 'demo-placeholder' }),
+      calendarId: 'demo-library-due-dates@group.calendar.invalid',
+      reminderTime: 480,
+      timeZone: 'America/Los_Angeles',
+      showTitles: true,
+      enabled: true,
+      lastSyncedAt,
+    },
+  });
+}
+
 async function reseedAccount(account) {
   const scraper = getScraper(account.scraperType);
   const result = await scraper.scrape({ credentials: {}, config: account.scraperConfig });
@@ -126,13 +150,14 @@ async function main() {
   await ensureHouseholdMember(household.id, user.id);
   const library = await ensureDemoLibrary();
   const accounts = await ensureDemoAccounts(household.id, library.id);
+  await ensureDemoCalendar(household.id, user.id);
 
   let total = 0;
   for (const account of accounts) {
     total += await reseedAccount(account);
   }
 
-  console.log(`[reseed-demo] household ${household.id}: reseeded ${accounts.length} account(s), ${total} checkout(s)`);
+  console.log(`[reseed-demo] household ${household.id}: reseeded ${accounts.length} account(s), ${total} checkout(s), calendar link ready`);
   await prisma.$disconnect();
 }
 
