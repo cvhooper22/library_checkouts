@@ -8,14 +8,14 @@
 	 * account), so everyone else gets the same facts read-only.
 	 * @type {{
 	 *   calendar: import('$lib/calendar.js').CalendarStatus | null,
-	 *   readOnly?: boolean,
+	 *   canConnect?: boolean,
 	 *   notice?: string | null,
 	 *   onConnect: () => Promise<string | null>,
 	 *   onSave: (changes: { reminderTime?: number, timeZone?: string, showTitles?: boolean }) => Promise<string | null>,
 	 *   onDisconnect: (deleteCalendar: boolean) => Promise<string | null>
 	 * }}
 	 */
-	let { calendar, readOnly = false, notice = null, onConnect, onSave, onDisconnect } = $props();
+	let { calendar, canConnect = true, notice = null, onConnect, onSave, onDisconnect } = $props();
 
 	const id = $props.id();
 
@@ -30,7 +30,7 @@
 	/** @type {HTMLElement | undefined} */
 	let root = $state();
 
-	const canChange = $derived(Boolean(calendar?.isYou) && !readOnly);
+	const canChange = $derived(Boolean(calendar?.isYou));
 	const who = $derived(calendar?.isYou ? 'you' : calendar?.connectedBy);
 
 	async function connect() {
@@ -119,13 +119,13 @@
 			they’re overdue.
 		</p>
 		<div class="actions">
-			<button class="file" type="button" onclick={connect} disabled={connecting || readOnly}>
+			<button class="file" type="button" onclick={connect} disabled={connecting || !canConnect}>
 				{connecting ? 'Opening Google…' : 'Connect Google Calendar'}
 			</button>
 		</div>
 		<p class="fine">
-			{#if readOnly}
-				The demo household can’t connect a calendar
+			{#if !canConnect}
+				Connecting a calendar isn’t available in the demo
 			{:else}
 				Google will warn that this app isn’t verified yet — it’s in testing. It can only reach the
 				one calendar it makes, “Library Due Dates”.

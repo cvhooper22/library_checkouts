@@ -1,14 +1,25 @@
 <script>
 	import '$lib/styles/tokens.css';
-	import favicon from '$lib/assets/favicon.svg';
+	import { page } from '$app/state';
+	import DemoBanner from '$lib/components/DemoBanner.svelte';
+	import { getSession } from '$lib/session.js';
 
 	let { children } = $props();
+
+	// Re-read on every navigation: the session changes when someone signs in or out.
+	const demo = $derived.by(() => {
+		page.url;
+		return getSession()?.demo === true;
+	});
 </script>
 
 <svelte:head>
-	<title>Date Due</title>
-	<link rel="icon" href={favicon} />
+	<title>Bookstamp</title>
 </svelte:head>
+
+{#if demo}
+	<DemoBanner />
+{/if}
 
 <main>
 	{@render children()}

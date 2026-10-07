@@ -1,4 +1,5 @@
 <script>
+	import Logo from '$lib/components/Logo.svelte';
 	import CatalogTabs from './CatalogTabs.svelte';
 	import EmailAuthForm from './EmailAuthForm.svelte';
 	import PaperCard from './PaperCard.svelte';
@@ -32,6 +33,7 @@
 	<PaperCard>
 		<div class="body">
 			<header class="head">
+				<Logo height="1.75rem" />
 				<span class="form-no">Form<br />2·A</span>
 			</header>
 
@@ -104,7 +106,7 @@
 
 	.head {
 		display: flex;
-		justify-content: flex-end;
+		justify-content: space-between;
 		align-items: flex-start;
 		margin-bottom: var(--dd-space-7);
 		font-family: var(--dd-font-display);

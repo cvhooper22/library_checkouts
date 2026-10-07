@@ -1,4 +1,5 @@
 <script>
+	import Logo from '$lib/components/Logo.svelte';
 	import { onMount, tick } from 'svelte';
 	import { pad2 } from '$lib/checkouts.js';
 	import CatalogTabs from './CatalogTabs.svelte';
@@ -11,7 +12,6 @@
 	 *   accounts: import('$lib/cards.js').CardAccount[],
 	 *   libraries: import('$lib/cards.js').Library[],
 	 *   householdName: string,
-	 *   readOnly?: boolean,
 	 *   startOpen?: boolean,
 	 *   error?: string | null,
 	 *   onAdd: (card: import('$lib/cards.js').NewCard) => Promise<boolean>,
@@ -25,7 +25,6 @@
 		accounts,
 		libraries,
 		householdName,
-		readOnly = false,
 		startOpen = false,
 		error = null,
 		onAdd,
@@ -68,7 +67,6 @@
 	];
 
 	async function openForm() {
-		if (readOnly) return;
 		adding = true;
 		libraryId ||= libraries[0]?.id ?? '';
 		await tick();
@@ -82,7 +80,6 @@
 	}
 
 	function startEditName() {
-		if (readOnly) return;
 		nameInput = householdName;
 		nameError = null;
 		editingName = true;
@@ -184,6 +181,7 @@
 	<PaperCard>
 		<header class="head">
 			<div>
+				<div class="brand"><Logo height="1.75rem" /></div>
 				<h1 class="title">Register of Borrower’s Cards</h1>
 				<p class="sub">Household library account — Cards {pad2(accounts.length)}</p>
 			</div>
@@ -220,9 +218,7 @@
 				<div class="field">
 					<div class="field-row">
 						<div class="field-value">{householdName}</div>
-						{#if !readOnly}
-							<button class="link rename" type="button" onclick={startEditName}>Rename</button>
-						{/if}
+						<button class="link rename" type="button" onclick={startEditName}>Rename</button>
 					</div>
 					<div class="field-label">Household name</div>
 				</div>
@@ -250,17 +246,15 @@
 						<div class="cell c-pin on-file"><span aria-hidden="true">••••</span><span class="sr">PIN on file</span></div>
 						<div class="cell c-who">
 							<span class="who">{a.displayName}</span>
-							{#if !readOnly}
-								<button
-									class="x"
-									type="button"
-									aria-label="Remove {a.displayName}’s card at {a.library.name}"
-									aria-expanded={confirmingId === a.id}
-									onclick={() => askRemove(a.id)}
-								>
-									×
-								</button>
-							{/if}
+							<button
+								class="x"
+								type="button"
+								aria-label="Remove {a.displayName}’s card at {a.library.name}"
+								aria-expanded={confirmingId === a.id}
+								onclick={() => askRemove(a.id)}
+							>
+								×
+							</button>
 						</div>
 
 						{#if confirmingId === a.id}
@@ -369,7 +363,7 @@
 			{:else}
 				<div class="row open">
 					<div class="cell c-lib">
-						<button class="add-btn" type="button" onclick={openForm} disabled={readOnly}>
+						<button class="add-btn" type="button" onclick={openForm}>
 							+ Add a card
 						</button>
 					</div>
@@ -385,9 +379,7 @@
 
 		<footer class="foot">
 			<p class="foot-note">
-				{#if readOnly}
-					The demo register is read-only
-				{:else if adding}
+				{#if adding}
 					Press File this card to enter it in the register
 				{:else}
 					The next ruled line is always open for a new card
@@ -414,6 +406,10 @@
 		align-items: flex-start;
 		gap: var(--dd-space-5);
 		padding: var(--dd-space-6) var(--dd-gutter) var(--dd-space-6);
+	}
+
+	.brand {
+		margin-bottom: var(--dd-space-5);
 	}
 
 	.title {

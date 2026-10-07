@@ -151,6 +151,7 @@
 	{#if data.showCalendar}
 		<CalendarSection
 			calendar={data.calendar}
+			canConnect={data.canConnectCalendar}
 			notice={data.calendarNotice}
 			onConnect={connectCalendar}
 			onSave={saveCalendar}
@@ -173,8 +174,7 @@
 	accounts={data.accounts}
 	libraries={data.libraries}
 	householdName={data.session.householdName}
-	readOnly={data.session.demo}
-	startOpen={data.accounts.length === 0 && !data.session.demo}
+	startOpen={data.accounts.length === 0}
 	{error}
 	onAdd={addCard}
 	onRemove={removeCard}

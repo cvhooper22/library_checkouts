@@ -63,7 +63,7 @@
 	holderFor={(a) => holderLine(a.name, a.id)}
 	updatedAt={data.updatedAt}
 	{refresh}
-	onRefresh={data.session.demo || !data.features.refresh ? undefined : restamp}
+	onRefresh={data.features.refresh ? restamp : undefined}
 	onReload={reload}
 	onSignOut={signOut}
 	onManageCards={() => goto('/cards')}
