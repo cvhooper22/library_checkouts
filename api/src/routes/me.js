@@ -2,6 +2,7 @@ const express = require('express');
 const prisma = require('@library-tracker/db');
 const { verifyGoogleIdToken } = require('../auth/google');
 const { HttpError } = require('../lib/errors');
+const { policiesFor } = require('../auth/capabilities');
 
 const router = express.Router();
 
@@ -34,6 +35,9 @@ router.get('/', async (req, res) => {
 
   res.json({
     user: { id: user.id, email: user.email, ...signInMethods(user) },
+    role: req.role,
+    // What each write is for this caller: allow, simulate or deny. The client renders from this.
+    capabilities: policiesFor(req.role),
     households: user.householdMembers.map(({ role, household }) => ({
       id: household.id,
       name: household.name,

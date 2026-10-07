@@ -121,7 +121,7 @@ const demoLoginLimiter = rateLimit({
 // Public, credential-less entry point for "Try it out" — mints a token for the
 // one shared, seeded demo household's owner. DEMO_MODE_ENABLED is a kill switch
 // that needs no deploy to flip. The token's `demo: true` claim is what
-// demoReadOnly (auth/middleware.js) keys off of for every subsequent request.
+// enforceCapabilities (auth/enforce.js) keys off of for every subsequent request.
 router.post('/demo', demoLoginLimiter, async (req, res) => {
   if (process.env.DEMO_MODE_ENABLED === 'false') {
     throw new HttpError(404, 'Demo mode is not enabled');

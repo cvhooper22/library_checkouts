@@ -478,7 +478,7 @@ DATABASE_URL="&lt;external-url&gt;?sslmode=require" npm run migrate:deploy</code
         <li>In the <a href="https://console.cloud.google.com/">Google Cloud Console</a>, create a project (or pick one).</li>
         <li><strong>APIs &amp; Services → OAuth consent screen:</strong> choose External, fill in the app name and your email, and add yourself as a test user while in testing mode.</li>
         <li><strong>Credentials → Create Credentials → OAuth client ID</strong>, type Web application.</li>
-        <li>Under <strong>Authorized JavaScript origins</strong>, add your local dev origin (e.g. <code>http://localhost:5173</code>) and your deployed frontend URL — no trailing slash or path.</li>
+        <li>Under <strong>Authorized JavaScript origins</strong>, add your local dev origin (e.g. <code>http://localhost:7777</code>) and your deployed frontend URL — no trailing slash or path.</li>
         <li>Copy the Client ID (<code>…apps.googleusercontent.com</code>) and set it as <code>GOOGLE_CLIENT_ID</code> on the API.</li>
       </ol>
       <p>The Client ID isn't secret, and sign-in alone doesn't need the Client Secret (the API only verifies ID tokens). The frontend will need the same ID when the button is wired up, probably as a build-time <code>VITE_GOOGLE_CLIENT_ID</code>.</p>
@@ -489,7 +489,7 @@ DATABASE_URL="&lt;external-url&gt;?sslmode=require" npm run migrate:deploy</code
       <ol>
         <li>In the same Cloud project, enable the <strong>Google Calendar API</strong> (APIs &amp; Services → Library).</li>
         <li>Under <strong>Google Auth Platform → Data Access</strong>, add the scope <code>https://www.googleapis.com/auth/calendar.app.created</code>. It only reaches calendars the app itself creates, and Google rates it non-sensitive.</li>
-        <li>On the web client, add <strong>Authorized redirect URIs</strong> for <code>http://localhost:5173/calendar/callback</code> and your deployed frontend's <code>/calendar/callback</code>, and create a <strong>client secret</strong>.</li>
+        <li>On the web client, add <strong>Authorized redirect URIs</strong> for <code>http://localhost:7777/calendar/callback</code> and your deployed frontend's <code>/calendar/callback</code>, and create a <strong>client secret</strong>.</li>
         <li>While the app is in <strong>Testing</strong>, add each person who will connect as a test user. Testing-mode grants expire after 7 days; the Set up page then shows a "reconnect" message.</li>
         <li>Set <code>GOOGLE_CLIENT_SECRET</code>, <code>GOOGLE_CALENDAR_REDIRECT_URI</code> and <code>CALENDAR_ENABLED=true</code> on the API, and <code>GOOGLE_CLIENT_ID</code> / <code>GOOGLE_CLIENT_SECRET</code> wherever calendars are synced (below).</li>
       </ol>

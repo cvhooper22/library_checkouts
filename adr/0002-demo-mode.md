@@ -4,7 +4,7 @@ Date: 2026-09-17
 
 ## Status
 
-Accepted
+Accepted. Decision 6 (the blanket read-only middleware) is superseded by `adr/0004-capability-based-authorization.md`: demo writes are now allowed, simulated or denied per capability. Everything else here stands, including that a demo token can never reach the scrape queue.
 
 ## Context
 

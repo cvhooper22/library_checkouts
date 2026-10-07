@@ -1,3 +1,10 @@
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="frontend/bookstamp-kit-oswald/two-line/bookstamp-stacked-oswald-paper.svg">
+    <img src="frontend/bookstamp-kit-oswald/two-line/bookstamp-stacked-oswald-ink.svg" alt="Bookstamp" width="240">
+  </picture>
+</p>
+
 # Bookstamp
 A web app to show all of a groups library checkouts in one place
 

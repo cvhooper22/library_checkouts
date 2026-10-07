@@ -7,7 +7,8 @@ const libraryRoutes = require('./routes/libraries');
 const accountRoutes = require('./routes/accounts');
 const meRoutes = require('./routes/me');
 const featureRoutes = require('./routes/features');
-const { authenticate, demoReadOnly } = require('./auth/middleware');
+const { authenticate } = require('./auth/middleware');
+const { enforceCapabilities } = require('./auth/enforce');
 const { errorHandler } = require('./lib/errors');
 
 function createApp() {
@@ -31,10 +32,10 @@ function createApp() {
   // Unauthenticated — this is how a token is obtained in the first place.
   app.use('/auth', authRoutes);
 
-  // Everything below requires a valid bearer token, and demo tokens are
-  // read-only (adr/0002-demo-mode.md decision 6). Routes don't re-apply
-  // authenticate themselves.
-  app.use(authenticate, demoReadOnly);
+  // Everything below requires a valid bearer token, and a write is allowed, simulated or
+  // denied for the caller's role before any route sees it
+  // (adr/0004-capability-based-authorization.md). Routes don't re-apply either themselves.
+  app.use(authenticate, enforceCapabilities);
 
   app.use('/me', meRoutes);
   app.use('/features', featureRoutes);
